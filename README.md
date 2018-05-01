@@ -8,12 +8,12 @@ ASB2 Challenge for Alien Swarm: Reactive Drop is created by AutoGavy
 
 Changes from regular ASBI:
 - Message System:
->Greeting when game starts
->Type &help to see Chat Commands (Chat Commands only enabled after game started)
->Points counting system - Record player's points in each game
->Show each player's points
->Show current map name
->Show the death reason of marine
+Greeting when game starts
+Type &help to see Chat Commands (Chat Commands only enabled after game started)
+Points counting system - Record player's points in each game
+Show each player's points
+Show current map name
+Show the death reason of marine
 
 - Enabled two sided hordes
 - Drones acceleration is back
