@@ -453,7 +453,7 @@ function SortAlienName(alien_class)
 		case "asw_parasite":
 			return " ate a Parasite.";
 		case "asw_shieldbug":
-			return " Shieldbug.";
+			return " was trampled by a Shieldbug.";
 		case "asw_drone_jumper":
 			return " was killed by a Jumper Drone.";
 		case "asw_harvester":
@@ -463,7 +463,7 @@ function SortAlienName(alien_class)
 		case "asw_queen":
 			return " was killed by an Alien Queen.";
 		case "asw_boomer":
-			return " was killed by a Boomer.";
+			return " was kicked to death by a Boomer.";
 		case "asw_boomer_blob":
 			return " ate a Boomer blob."
 		case "asw_ranger":
