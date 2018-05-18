@@ -17,11 +17,7 @@ Convars.SetValue("asw_marine_burn_time_easy", 60);
 Convars.SetValue("asw_marine_burn_time_normal", 60);
 Convars.SetValue("asw_marine_burn_time_hard", 60);
 Convars.SetValue("asw_marine_burn_time_insane", 60);
-Convars.SetValue("asw_wire_full_random", 1);
-Convars.SetValue("asw_stim_time_scale", 0.5);
 Convars.SetValue("rd_override_allow_rotate_camera", 1);
-Convars.SetValue("rd_horde_two_sided", 1);
-Convars.SetValue("sk_asw_buzzer_melee_interval", 0.2);
 
 const MessageShowDelay = 1.0;
 const thirdUpdateRunDelay = 0.5;
@@ -480,7 +476,7 @@ function SortAlienName(alien_class)
 		case "asw_alien_goo":
 			return " was killed by an Alien Biomass.";
 	}
-	return "an unknown alien.";
+	return " was killed by an unknown alien.";
 }
 
 function ReckonPoints(alien_class)

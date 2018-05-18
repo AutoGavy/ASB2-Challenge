@@ -116,6 +116,27 @@
 		"VScript"	"drone_mutation_carrier"
 		}
 	}
+	"PRESPAWN" {
+		"SelectionWeight"	"1"
+		"NPC" {
+		"AlienClass"	"asw_drone_uber"
+		"VScript"	"drone_ranger_carrier"
+		}
+	}
+	"PRESPAWN+WANDERER+HORDE_WANDERER" {
+		"SelectionWeight"	"1"
+		"NPC" {
+		"AlienClass"	"asw_harvester"
+		"VScript"	"drone_biomass_carrier"
+		}
+	}
+	"PRESPAWN+WANDERER+HORDE_WANDERER" {
+		"SelectionWeight"	"1"
+		"NPC" {
+		"AlienClass"	"asw_mortarbug"
+		"VScript"	"drone_sentry_carrier"
+		}
+	}
 	"PACK" {
 		"SelectionWeight"	"1"
 		"NPC" {

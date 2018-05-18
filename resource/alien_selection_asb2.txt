@@ -17,7 +17,7 @@
 	"MaxWanderers"	"6"
 	"MinHordeWanderers"	"2"
 	"MaxHordeWanderers"	"4"
-	"MinPrespawn"	"2"
+	"MinPrespawn"	"1"
 	"MaxPrespawn"	"5"
 	"MinPacks"	"0"
 	"MaxPacks"	"5"
@@ -25,13 +25,13 @@
 	"HORDE" {
 		"SelectionWeight"	"1"
 		"NPC" {
-			"AlienClass"	"asw_drone_jumper"
+			"AlienClass"	"asw_drone"
 		}
 	}
 	"WANDERER" {
 		"SelectionWeight"	"50"
 		"NPC" {
-			"AlienClass"	"asw_drone_jumper"
+			"AlienClass"	"asw_drone"
 		}
 	}
 	"WANDERER+HORDE_WANDERER" {
@@ -114,27 +114,6 @@
 		"NPC" {
 		"AlienClass"	"asw_drone_uber"
 		"VScript"	"drone_mutation_carrier"
-		}
-	}
-	"PRESPAWN" {
-		"SelectionWeight"	"1"
-		"NPC" {
-		"AlienClass"	"asw_drone_uber"
-		"VScript"	"drone_ranger_carrier"
-		}
-	}
-	"PRESPAWN+WANDERER+HORDE_WANDERER" {
-		"SelectionWeight"	"1"
-		"NPC" {
-		"AlienClass"	"asw_harvester"
-		"VScript"	"drone_biomass_carrier"
-		}
-	}
-	"PRESPAWN+WANDERER+HORDE_WANDERER" {
-		"SelectionWeight"	"1"
-		"NPC" {
-		"AlienClass"	"asw_mortarbug"
-		"VScript"	"drone_sentry_carrier"
 		}
 	}
 	"PACK" {
