@@ -18,6 +18,8 @@ Convars.SetValue("asw_marine_burn_time_normal", 60);
 Convars.SetValue("asw_marine_burn_time_hard", 60);
 Convars.SetValue("asw_marine_burn_time_insane", 60);
 Convars.SetValue("rd_override_allow_rotate_camera", 1);
+Convars.SetValue("rd_increase_difficulty_by_number_of_marines", 0);
+Convars.SetValue("rm_prespawn_num_biomass", 1);
 
 const MessageShowDelay = 1.0;
 const thirdUpdateRunDelay = 0.5;
@@ -34,10 +36,14 @@ forthUpdateRun <- true;
 MissionsDisabled <- false;
 ShouldCheckMarker <- false;
 
-PlayerArray <- array(8, null);
-MarineArray <- array(8, null);
-NameArray <- array(8, null);
-PointArray <- array(8, 0);
+PlayerArray <- array(16, null);
+MarineArray <- array(16, null);
+NameArray <- array(16, null);
+MineArray <- array(16, null);
+PointArray <- array(16, 0);
+BSkin <- array(16, true);
+BMineHat <- array(16, true);
+BTail <- array(16, true);
 n_AutoGavy <- null;
 
 if (Convars.GetFloat("asw_skill") == 1) //easy
@@ -64,7 +70,7 @@ else if (Convars.GetFloat("asw_skill") == 2) //normal
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("rd_prespawn_scale", 3);
+	Convars.SetValue("rd_prespawn_scale", 2);
 }
 else if (Convars.GetFloat("asw_skill") == 3) //hard
 {
@@ -183,6 +189,12 @@ function OnGameEvent_entity_killed(params)
 				victim = i;
 		}
 		
+		if (!BMineHat[victim])
+		{
+			PlantIncendiaryMine(MineArray[victim].GetOrigin(), MineArray[victim].GetAngles());
+			MineArray[victim].Destroy();
+		}
+		
 		if (h_attacker.GetClassname() == "asw_marine")
 		{
 			if (h_attacker.GetMarineName() == h_victim.GetMarineName() && victim == 128)
@@ -282,8 +294,12 @@ function OnGameEvent_player_say(params)
 	switch ((params["text"]).tolower())
 	{
 		case "&help":
-			ShowMessage("==== List of Chat Commands ====\n&pts  -  Display each player's points.\n&map  - Display the current map name.");
-			ShowMessage("&ctr  -  See ASB2 Challenge Creator.\n~Have Fun!");
+			ShowMessage("==== List of Chat Commands ====\n&pts  -  Display each player's points.\n&map  -  Display the current map name.");
+			ShowMessage("&skin  -  Give a black skin to player who has over 100 points.\nPage 1/2     Type &help2 to see next page.");
+			break;
+		case "&help2":
+			ShowMessage("&mine  -  Give a Flame Mine hat to player who has over 200 points.\n&tail  -  Give a rocket tail to player who has over 400 points.");
+			ShowMessage("&ctr  -  See ASB2 Challenge Creator.\n~Have Fun!\nPage 2/2     Type &help to see previous page.");
 			break;
 		case "&pts":
 			ShowAllPointsLate();
@@ -294,6 +310,24 @@ function OnGameEvent_player_say(params)
 		case "&ctr":
 			ShowMessage("ASB2 Challenge is made by AutoGavy. You can report any bugs on the workshop page.");
 			break;
+		case "&skin":
+			SetSkin();
+			break;
+		case "&mine":
+			SetMineHat();
+			break;
+		case "&tail":
+			SetTail();
+			break;
+	}
+}
+
+function OnGameEvent_player_heal(params)
+{
+	for (local i = 0; i < PlayersCounter; i++)
+	{
+		if (NameArray[i] == "Faith" || NameArray[i] == "Bastille")
+			SetPoints(i, 1, 1);
 	}
 }
 
@@ -329,11 +363,22 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 			}
 			if (attacker == 128)
 				return damage;
-			
-			SetPoints(attacker, (damage / 20 + 1).tointeger(), 0);
+			SetPoints(attacker, ((damage / 20 + 10) * 5).tointeger(), 0);
+		}
+		else if (weapon != null && h_victim.IsAlien() && weapon.GetClassname() == "asw_weapon_tesla_gun")
+		{
+			local attacker = 128;
+			for (local i = 0; i < PlayersCounter; i++)
+			{
+				local AttackerName = NameArray[i];
+				if (h_attacker.GetMarineName() == AttackerName)
+					attacker = i;
+			}
+			if (attacker == 128)
+				return damage;
+			SetPoints(attacker, 1, 1);
 		}
 	}
-		
 	return damage;
 }
 
@@ -460,47 +505,55 @@ function ReckonPoints(alien_class)
 	switch(alien_class)
 	{
 		case "asw_drone":
-			return 2;
+			return 10;
 		case "asw_buzzer":
-			return 1;
+			return 5;
 		case "asw_parasite":
-			return 2;
+			return 10;
 		case "asw_shieldbug":
-			return 6;
+			return 30;
 		case "asw_drone_jumper":
-			return 2;
+			return 10;
 		case "asw_harvester":
-			return 5;
+			return 25;
 		case "asw_parasite_defanged":
-			return 1;
+			return 5;
 		case "asw_queen":
-			return 8;
+			return 40;
 		case "asw_boomer":
-			return 5;
+			return 25;
 		case "asw_ranger":
-			return 3;
+			return 15;
 		case "asw_mortarbug":
-			return 5;
+			return 25;
 		case "asw_drone_uber":
-			return 4;
+			return 20;
 		case "npc_antlionguard_normal":
-			return 7;
+			return 35;
 		case "npc_antlionguard_cavern":
-			return 7;
+			return 35;
 		case "asw_egg":
-			return 3;
+			return 15;
 	}
 	return 2;
 }
 
 function ShowAllPoints()
 {
+	local readMarker = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
 		for (local y = 0; y < PlayersCounter; y++)
 		{
 			if (y == i || NameArray[y] == null)
 				continue;
+			else
+				readMarker++;
+			if (readMarker > 4)
+			{
+				ShowPointsHelper(i, y);
+				break;
+			}
 			ClientPrint(PlayerArray[i], 3, NameArray[y] + " have " + PointArray[y] + " pts.");
 		}
 		ClientPrint(PlayerArray[i], 3, "You have: " + PointArray[i] + " pts.");
@@ -519,14 +572,23 @@ function ShowAllPointsLate()
 	timerScope.PlayerArray <- PlayerArray;
 	timerScope.NameArray <- NameArray;
 	timerScope.PointArray <- PointArray;
+	timerScope.ShowPointsHelper <- ShowPointsHelper;
 	timerScope.TimerFunc <- function()
 	{
+		local readMarker = 0;
 		for (local i = 0; i < PlayersCounter; i++)
 		{
 			for (local y = 0; y < PlayersCounter; y++)
 			{
 				if (y == i || NameArray[y] == null)
 					continue;
+				else
+					readMarker++;
+				if (readMarker > 4)
+				{
+					ShowPointsHelper(i, y);
+					break;
+				}
 				ClientPrint(PlayerArray[i], 3, NameArray[y] + " have " + PointArray[y] + " pts.");
 			}
 			ClientPrint(PlayerArray[i], 3, "You have: " + PointArray[i] + " pts.");
@@ -536,4 +598,105 @@ function ShowAllPointsLate()
 	}
 	timer.ConnectOutput("OnTimer", "TimerFunc");
 	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+function ShowPointsHelper(i, y)
+{
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", 2.5);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	local timerScope = timer.GetScriptScope();
+	
+	timerScope.PlayersCounter <- PlayersCounter;
+	timerScope.PlayerArray <- PlayerArray;
+	timerScope.NameArray <- NameArray;
+	timerScope.PointArray <- PointArray;
+	timerScope.i <- i;
+	timerScope.y <- y;
+	timerScope.TimerFunc <- function()
+	{
+		for (; y < PlayersCounter; y++)
+		{
+			if (y == i || NameArray[y] == null)
+				continue;
+			ClientPrint(PlayerArray[i], 3, NameArray[y] + " have " + PointArray[y] + " pts.");
+		}
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+function SetSkin()
+{
+	local count = 0;
+	for (local i = 0; i < PlayersCounter; i++)
+	{
+		if (BSkin[i] && PointArray[i] >= 200)
+		{
+			MarineArray[i].__KeyValueFromString("rendercolor", "0,0,0");
+			BSkin[i] = false;
+			count++;
+		}
+	}
+	ShowMessage("Done for " + count + " players.");
+}
+
+function SetMineHat()
+{
+	local count = 0;
+	for (local i = 0; i < PlayersCounter; i++)
+	{
+		if (BMineHat[i] && PointArray[i] >= 400)
+		{
+			MineArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin() + Vector(0, 0, 68), "models/items/mine/mine.mdl", 1);
+			
+			local marine = MarineArray[i];
+			EntFireByHandle(MineArray[i], "SetDefaultAnimation", "BindPose", 0, marine, marine);
+			EntFireByHandle(MineArray[i], "SetAnimation", "BindPose", 0, self, self);
+			EntFireByHandle(MineArray[i], "DisableShadow", "", 0, marine, marine);
+			EntFireByHandle(MineArray[i], "SetParent", "!activator", 0, marine, marine);
+			EntFireByHandle(MineArray[i], "FireUser1", "", 0, marine, marine);
+			
+			BMineHat[i] = false;
+			count++;
+		}
+	}
+	ShowMessage("Done for " + count + " players.");
+}
+
+function SetTail()
+{
+	local count = 0;
+	for (local i = 0; i < PlayersCounter; i++)
+	{
+		if (BTail[i] && PointArray[i] >= 600)
+		{
+			local particle = Entities.CreateByClassname("info_particle_system");
+			particle.__KeyValueFromString("effect_name", "rocket_trail_small_glow");
+			particle.__KeyValueFromString("start_active", "1");
+			particle.SetOrigin(MarineArray[i].GetOrigin() + Vector(0, 0, 30));
+			particle.SetAnglesVector(MarineArray[i].GetAngles());
+			
+			local particle2 = Entities.CreateByClassname("info_particle_system");
+			particle2.__KeyValueFromString("effect_name", "rocket_trail_small");
+			particle2.__KeyValueFromString("start_active", "1");
+			particle2.SetOrigin(MarineArray[i].GetOrigin() + Vector(0, 0, 30));
+			particle2.SetAnglesVector(MarineArray[i].GetAngles());
+			
+			DoEntFire("!self", "SetParent", "!activator", 0, MarineArray[i], particle);
+			DoEntFire("!self", "SetParent", "!activator", 0, MarineArray[i], particle2);
+			
+			particle.Spawn();
+			particle.Activate();
+			particle2.Spawn();
+			particle2.Activate();
+			
+			BTail[i] = false;
+			count++;
+		}
+	}
+	ShowMessage("Done for " + count + " players.");
 }

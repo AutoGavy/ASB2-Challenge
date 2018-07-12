@@ -14,8 +14,9 @@ Greeting when game starts
 3. Show each player's points
 4. Show current map name
 5. Show the death reason of marine
+6. Points Gifts
 
-- Enabled two sided hordes
+- Enabled two sided hordes (II Only)
 - Drones acceleration is back
 - Slowmotion Time - 77% (II Only)
 - Harder wire hacks (II Only)
@@ -32,14 +33,14 @@ If you hit or kill a marine, you will lose points.(Based on damage)
 
 - Different difficulty has different settings:
 1. Easy - Very fast drones + Prespawn 1
-2. Normal - Vanilla brutal drone's speed + Prespawn 3
+2. Normal - Vanilla brutal drone's speed + Prespawn 2
 3. Hard - ASB2 + Prepsawn 1
 4. Insane, Brutal - ASB2
 *Prespawn is something like Carnage.
 
 Some of above game settings are refered to ASBI PRO(Eerie-Eg) and jihad Server(wildcat).
 
-This addon includes 4 challenge: ASB2, ASB2 II
+This addon includes 2 challenge: ASB2, ASB2 II
 
 ASB2 Beta Gameplay Video: http://www.bilibili.com/video/av22789674
 This video is recorded from ASB2 Beta, not the lastest version. Such as Slowmotion Time is changed in the lastest version.
