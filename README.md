@@ -8,13 +8,16 @@ ASB2 Challenge for Alien Swarm: Reactive Drop is created by AutoGavy
 
 Changes from regular ASBI:
 - Message System:
-Greeting when game starts
-1. Type &help to see Chat Commands (Chat Commands only enabled after game started)
-2. Points counting system - Record player's points in each game
-3. Show each player's points
-4. Show current map name
-5. Show the death reason of marine
-6. Points Gifts
+1. Greeting when game starts
+2. Type &help to see Chat Commands (Chat Commands only enabled after game started)
+3. Counting System - Record player's points, kills, shoots and deaths (all games, in total)
+4. Show each player's points
+5. Show current map name
+6. Show the death reason of marine
+7. Show each player's kills
+8. Show each player's shoots
+9. Show each player's deaths
+10. Points Gifts
 
 - Enabled two sided hordes (II Only)
 - Drones acceleration is back
@@ -25,11 +28,13 @@ Greeting when game starts
 - Added 3 new aliens (II Only)
 - Reduced Buzzer's attack interval (II Only)
 - Added Jumper Drone Horde (II Only)
+- Enabled OnFire Settings when there's a player/bot using flamerthrower
 
-- About Points counting system:
+- About the Counting System:
 If you kill a drone, you will receive points. If you are hit by drones, you will lose points.
 Different drone has different points.
 If you hit or kill a marine, you will lose points.(Based on damage)
+Playing in higher difficulty will get more points.
 
 - Different difficulty has different settings:
 1. Easy - Very fast drones + Prespawn 1
