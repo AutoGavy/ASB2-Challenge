@@ -52,7 +52,7 @@ NameArray <- array(16, null);
 MineArray <- array(16, null);
 PointArray <- array(16, 0);
 KillArray <- array(16, 0);
-ShootArray <- array(16, 0);
+ShotArray <- array(16, 0);
 DeathArray <- array(16, 0);
 BSkin <- array(16, true);
 BMineHat <- array(16, true);
@@ -343,7 +343,7 @@ function OnGameEvent_player_say(params)
 			ShowMessage("&kill  -  Display each player's kills.\nPage 1/3     Type &help2 to see next page.");
 			break;
 		case "&help2":
-			ShowMessage("&shoot  -  Display each player's shoots.\n&death  -  Display each player's deaths.");
+			ShowMessage("&shot  -  Display each player's shots.\n&death  -  Display each player's deaths.");
 			ShowMessage("&skin  -  Give a black skin to player who has over 2000 points.");
 			ShowMessage("&mine  -  Give a Flame Mine hat to player who has over 4000 points.\nPage 2/3     Type &help3 to see next page.");
 			break;
@@ -357,8 +357,8 @@ function OnGameEvent_player_say(params)
 		case "&kill":
 			ShowKills();
 			break;
-		case "&shoot":
-			ShowShoots();
+		case "&shot":
+			ShowShots();
 			break;
 		case "&death":
 			ShowDeaths();
@@ -542,16 +542,16 @@ function OnGameEvent_weapon_fire(params)
 	{
 		if (marine.GetMarineName() == NameArray[i])
 		{
-			if (weapon.GetClassname() == "asw_weapon_heal_gun" || weapon.GetClassname() == "asw_weapon_heal_grenade" || weapon.GetClassname() == "asw_weapon_medical_satchel" || weapon.GetClassname() == "asw_weapon_ammo_bag" || weapon.GetClassname() == "asw_weapon_ammo_satchel")
+			if (weapon.GetClassname() == "asw_weapon_heal_gun" || weapon.GetClassname() == "asw_weapon_heal_grenade" || weapon.GetClassname() == "asw_weapon_medical_satchel" || weapon.GetClassname() == "asw_weapon_ammo_bag" || weapon.GetClassname() == "asw_weapon_ammo_satchel" || weapon.GetClassname() == "asw_weapon_chainsaw" || weapon.GetClassname() == "asw_weapon_mining_laser" || weapon.GetClassname() == "asw_weapon_sentry" || weapon.GetClassname() == "asw_weapon_sentry_flamer" || weapon.GetClassname() == "asw_weapon_sentry_freeze" || weapon.GetClassname() == "asw_weapon_sentry_cannon")
 				return;
 			
-			ShootArray[i]++;
+			ShotArray[i]++;
 			return;
 		}
 	}
 }
 
-//Data File: Points, Kills, Shoots, Deaths
+//Data File: Points, Kills, Shots, Deaths
 function ReadDataFile()
 {
 	for (local i = 0; i < PlayersCounter; i++)
@@ -569,7 +569,7 @@ function ReadDataFile()
 				local strArrayContent = split(FileReader, strDelimiter);
 				PointArray[i] = strArrayContent[0].tointeger();
 				KillArray[i] = strArrayContent[1].tointeger();
-				ShootArray[i] = strArrayContent[2].tointeger();
+				ShotArray[i] = strArrayContent[2].tointeger();
 				DeathArray[i] = strArrayContent[3].tointeger();
 			}
 		}
@@ -585,7 +585,7 @@ function SaveData()
 			local BaseFileName = split(PlayerArray[i].GetNetworkIDString(), ":");
 			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
 			
-			StringToFile(FileName, PointArray[i].tostring() + strDelimiter + KillArray[i].tostring() + strDelimiter + ShootArray[i].tostring() + strDelimiter + DeathArray[i].tostring());
+			StringToFile(FileName, PointArray[i].tostring() + strDelimiter + KillArray[i].tostring() + strDelimiter + ShotArray[i].tostring() + strDelimiter + DeathArray[i].tostring());
 		}
 	}
 	SaveDataCounter = 0;
@@ -897,7 +897,7 @@ function ShowKillsHelper(i, y)
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function ShowShoots()
+function ShowShots()
 {
 	local timer = Entities.CreateByClassname("logic_timer");
 	timer.__KeyValueFromFloat("RefireTime", 0.01);
@@ -908,8 +908,8 @@ function ShowShoots()
 	timerScope.PlayersCounter <- PlayersCounter;
 	timerScope.PlayerArray <- PlayerArray;
 	timerScope.NameArray <- NameArray;
-	timerScope.ShootArray <- ShootArray;
-	timerScope.ShowShootsHelper <- ShowShootsHelper;
+	timerScope.ShotArray <- ShotArray;
+	timerScope.ShowShotsHelper <- ShowShotsHelper;
 	timerScope.TimerFunc <- function()
 	{
 		local readMarker = 0;
@@ -923,12 +923,12 @@ function ShowShoots()
 					readMarker++;
 				if (readMarker > 4)
 				{
-					ShowShootsHelper(i, y);
+					ShowShotsHelper(i, y);
 					break;
 				}
-				ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + ShootArray[y] + " shoots.");
+				ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + ShotArray[y] + " shots.");
 			}
-			ClientPrint(PlayerArray[i], 3, "You have: " + ShootArray[i] + " shoots.");
+			ClientPrint(PlayerArray[i], 3, "You have: " + ShotArray[i] + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -937,7 +937,7 @@ function ShowShoots()
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function ShowShootsHelper(i, y)
+function ShowShotsHelper(i, y)
 {
 	local timer = Entities.CreateByClassname("logic_timer");
 	timer.__KeyValueFromFloat("RefireTime", 2.5);
@@ -948,7 +948,7 @@ function ShowShootsHelper(i, y)
 	timerScope.PlayersCounter <- PlayersCounter;
 	timerScope.PlayerArray <- PlayerArray;
 	timerScope.NameArray <- NameArray;
-	timerScope.ShootArray <- ShootArray;
+	timerScope.ShotArray <- ShotArray;
 	timerScope.i <- i;
 	timerScope.y <- y;
 	timerScope.TimerFunc <- function()
@@ -957,7 +957,7 @@ function ShowShootsHelper(i, y)
 		{
 			if (y == i || NameArray[y] == null)
 				continue;
-			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + ShootArray[y] + " shoots.");
+			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + ShotArray[y] + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1107,4 +1107,17 @@ function SetTail()
 	ShowMessage("Done for " + count + " players.");
 }
 
+function ParticlePrecache(effect)
+{
+	local particle = Entities.CreateByClassname("info_particle_system");
+	particle.__KeyValueFromString("effect_name", effect);
+	particle.__KeyValueFromString("start_active", "1");
+	particle.SetOrigin(Vector(16384, 16384, 16384));
+	particle.Spawn();
+	particle.Activate();
+	DoEntFire("!self", "Kill", "", 0, null, particle);
+}
+
+ParticlePrecache("rocket_trail_small_glow");
+ParticlePrecache("rocket_trail_small");
 g_ModeScript.OnTakeDamage_Alive_Any <- OnTakeDamage_Alive_Any;
