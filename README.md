@@ -10,12 +10,12 @@ Changes from regular ASBI:
 - Message System:
 1. Greeting when game starts
 2. Type &help to see Chat Commands (Chat Commands only enabled after game started)
-3. Counting System - Record player's points, kills, shoots and deaths (all games, in total)
+3. Counting System - Record player's points, kills, shots and deaths (all games, in total)
 4. Show each player's points
 5. Show current map name
 6. Show the death reason of marine
 7. Show each player's kills
-8. Show each player's shoots
+8. Show each player's shots
 9. Show each player's deaths
 10. Points Gifts
 
@@ -28,7 +28,7 @@ Changes from regular ASBI:
 - Added 3 new aliens (II Only)
 - Reduced Buzzer's attack interval (II Only)
 - Added Jumper Drone Horde (II Only)
-- Enabled OnFire Settings when there's a player/bot using flamerthrower
+- Enables OnFire Settings when there's a player/bot using flamerthrower
 
 - About the Counting System:
 If you kill a drone, you will receive points. If you are hit by drones, you will lose points.
