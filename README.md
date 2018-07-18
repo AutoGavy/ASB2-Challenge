@@ -27,7 +27,6 @@ Changes from regular ASBI:
 - Removed map's weapon requirement
 - Added 3 new aliens (II Only)
 - Reduced Buzzer's attack interval (II Only)
-- Added Jumper Drone Horde (II Only)
 - Enables OnFire Settings when there's a player/bot using flamerthrower
 
 - About the Counting System:
