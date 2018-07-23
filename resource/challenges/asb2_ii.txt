@@ -13,5 +13,8 @@
 		"rd_biomass_ignite_from_explosions"	"1"
 		"rd_weapon_requirement_override"		"1"
 		"rd_override_allow_rotate_camera"		"1"
+		"rd_increase_difficulty_by_number_of_marines"	"0"
+		"rm_prespawn_num_biomass"			"1"
+
 	}
 }
