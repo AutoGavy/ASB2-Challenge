@@ -760,7 +760,8 @@ function ShowAllPoints()
 				ShowPointsHelper(i, y);
 				break;
 			}
-			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + PointArray[y] + " pts.");
+			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + PointArray[y] + " pts.");
 		}
 		ClientPrint(PlayerArray[i], 3, "You have: " + PointArray[i] + " pts.");
 	}
@@ -795,7 +796,8 @@ function ShowAllPointsLate()
 					ShowPointsHelper(i, y);
 					break;
 				}
-				ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + PointArray[y] + " pts.");
+				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + PointArray[y] + " pts.");
 			}
 			ClientPrint(PlayerArray[i], 3, "You have: " + PointArray[i] + " pts.");
 		}
@@ -826,7 +828,8 @@ function ShowPointsHelper(i, y)
 		{
 			if (y == i || NameArray[y] == null)
 				continue;
-			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + PointArray[y] + " pts.");
+			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + PointArray[y] + " pts.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
