@@ -216,18 +216,21 @@ function OnGameEvent_entity_killed(params)
 			SaveData();
 		}
 		
-		if (!BMineHat[victim])
+		if (victim != 128 && !BMineHat[victim])
 		{
 			PlantIncendiaryMine(MineArray[victim].GetOrigin(), MineArray[victim].GetAngles());
 			MineArray[victim].Destroy();
 		}
 		
-		if (h_inflictor != null)
+		if (victim != 128 && h_inflictor != null)
 		{
 			if (h_inflictor.GetClassname() == "asw_burning")
 			{
-				ShowMessage(NameArray[victim] + " was burned alive.");
-				//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
+				if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
+					ShowMessage(PlayerArray[victim].GetPlayerName() + " was burned alive.");
+				else
+					ShowMessage(NameArray[victim] + " was burned alive.");
+				
 				return;
 			}
 		}
@@ -257,54 +260,59 @@ function OnGameEvent_entity_killed(params)
 					b_isBot = false;
 					if (victim == i)
 					{
-						SetPoints(i, 40, 0);
+						SetPoints(i, 100, 0);
 						break;
 					}
 					if (victim == n_AutoGavy)
 					{
-						ShowMessage(AttackerName + " You killed ASB2 Creator!!!111");
-						//ShowMessage(AttackerName + " lost 100 pts.");
-						SetPoints(i, 80, 0);
-						//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
+						if (PlayerArray[i] != null && PlayerArray[i].GetPlayerName() != null)
+							ShowMessage(PlayerArray[i].GetPlayerName() + " You killed ASB2 Creator!!!111");
+						else
+							ShowMessage(AttackerName + " You killed ASB2 Creator!!!111");
+						
+						SetPoints(i, 100, 0);
 						break;
 					}
 					else
 					{
-						ShowMessage("Evil " + AttackerName + "!!!111");
-						//ShowMessage(AttackerName + " lost 100 pts.");
-						SetPoints(i, 80, 0);
+						if (PlayerArray[i] != null && PlayerArray[i].GetPlayerName() != null)
+							ShowMessage("Evil " + PlayerArray[i].GetPlayerName() + "!!!111");
+						else
+							ShowMessage("Evil " + AttackerName + "!!!111");
 						
-						//if (victim == 128)
-						//	ShowMessage("That dead marine has no pts because it is a robot!");
-						//else
-						//	ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
-						
+						SetPoints(i, 100, 0);
 						break;
 					}
 				}
 			}
 			if (b_isBot)
-				ShowMessage("Evil robot!");
+				ShowMessage("Evil Robot!");
 		}
 		else if (victim == 128)
 		{
-			ShowMessage("This Marine has no pts because it is a robot!");
+			//ShowMessage("This Marine has no pts because it is a robot!");
 			return;
 		}
 		else if (h_attacker.IsAlien())
 		{
-			ShowMessage(NameArray[victim] + SortAlienName(h_attacker.GetClassname()));
-			//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
+			if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
+				ShowMessage(PlayerArray[victim].GetPlayerName() + SortAlienName(h_attacker.GetClassname()));
+			else
+				ShowMessage(NameArray[victim] + SortAlienName(h_attacker.GetClassname()));
 		}
 		else if (h_attacker.GetClassname() == "asw_trigger_fall")
 		{
-			ShowMessage(NameArray[victim] + " has fallen to his demise.");
-			//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
+			if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
+				ShowMessage(PlayerArray[victim].GetPlayerName() + " has fallen to his demise.");
+			else
+				ShowMessage(NameArray[victim] + " has fallen to his demise.");
 		}
 		else if (h_attacker.GetClassname() == "env_fire")
 		{
-			ShowMessage(NameArray[victim] + " was burned alive.");
-			//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
+			if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
+				ShowMessage(PlayerArray[victim].GetPlayerName() + " was burned alive.");
+			else
+				ShowMessage(NameArray[victim] + " was burned alive.");
 		}
 		//else
 		//	ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
@@ -407,7 +415,7 @@ function VictimDeathFunc()
 
 function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage, damageType, ammoName) 
 {
-	/*if (h_attacker != null && h_attacker.IsAlien())
+	if (h_attacker != null && h_attacker.IsAlien())
 	{
 		if (h_victim != null && h_victim.GetClassname() == "asw_marine")
 		{
@@ -421,10 +429,9 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 			if (victim == 128)
 				return damage;
 			
-			SetPoints(victim, (ReckonPoints(h_attacker.GetClassname()) / 3).tointeger(), 0);
+			SetPoints(victim, (ReckonPoints(h_attacker.GetClassname()) / 2).tointeger(), 0);
 		}
 	}
-	else */
 	
 	if (FlamerDetected)
 	{
@@ -502,7 +509,7 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 				return damage;
 			
 			if (h_victim.GetMarineName() != h_attacker.GetMarineName())
-				SetPoints(attacker, (damage / 20).tointeger(), 0);
+				SetPoints(attacker, (damage / 2).tointeger(), 0);
 		}
 		else if (weapon != null && h_victim.IsAlien() && weapon.GetClassname() == "asw_weapon_tesla_gun")
 		{
@@ -556,7 +563,7 @@ function ReadDataFile()
 {
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (PlayerArray[i] != null)
+		if (PlayerArray[i] != null && MarineArray[i] != null)
 		{
 			local BaseFileName = split(PlayerArray[i].GetNetworkIDString(), ":");
 			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
@@ -580,7 +587,7 @@ function SaveData()
 {
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (PlayerArray[i] != null)
+		if (PlayerArray[i] != null && MarineArray[i] != null)
 		{
 			local BaseFileName = split(PlayerArray[i].GetNetworkIDString(), ":");
 			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
@@ -1040,7 +1047,7 @@ function SetSkin()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BSkin[i] && PointArray[i] >= 2000)
+		if (BSkin[i] && PointArray[i] >= 2000 && MarineArray[i] != null)
 		{
 			MarineArray[i].__KeyValueFromString("rendercolor", "0,0,0");
 			BSkin[i] = false;
@@ -1055,7 +1062,7 @@ function SetMineHat()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BMineHat[i] && PointArray[i] >= 4000)
+		if (BMineHat[i] && PointArray[i] >= 4000 && MarineArray[i] != null)
 		{
 			MineArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin() + Vector(0, 0, 68), "models/items/mine/mine.mdl", 1);
 			
@@ -1078,7 +1085,7 @@ function SetTail()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BTail[i] && PointArray[i] >= 8000)
+		if (BTail[i] && PointArray[i] >= 8000 && MarineArray[i] != null)
 		{
 			local particle = Entities.CreateByClassname("info_particle_system");
 			particle.__KeyValueFromString("effect_name", "rocket_trail_small_glow");
