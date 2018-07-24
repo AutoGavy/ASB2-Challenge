@@ -27,6 +27,9 @@ Convars.SetValue("asw_marine_burn_time_easy", 60);
 Convars.SetValue("asw_marine_burn_time_normal", 60);
 Convars.SetValue("asw_marine_burn_time_hard", 60);
 Convars.SetValue("asw_marine_burn_time_insane", 60);
+Convars.SetValue("rd_override_allow_rotate_camera", 1);
+Convars.SetValue("rd_increase_difficulty_by_number_of_marines", 0);
+Convars.SetValue("rm_prespawn_num_biomass", 1);
 
 const strDelimiter = ":";
 const MessageShowDelay = 1.0;
@@ -90,6 +93,7 @@ if (Convars.GetFloat("asw_skill") == 1) //easy
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
+	Convars.SetValue("asw_difficulty_alien_health_step", 1);
 	Convars.SetValue("rd_prespawn_scale", 1);
 	PointBonus = 0.1;
 }
@@ -104,6 +108,7 @@ else if (Convars.GetFloat("asw_skill") == 2) //normal
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
+	Convars.SetValue("asw_difficulty_alien_health_step", 1);
 	Convars.SetValue("rd_prespawn_scale", 2);
 	PointBonus = 0.2;
 }
@@ -118,6 +123,7 @@ else if (Convars.GetFloat("asw_skill") == 3) //hard
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
+	Convars.SetValue("asw_difficulty_alien_health_step", 1);
 	Convars.SetValue("rd_prespawn_scale", 1);
 	PointBonus = 0.4;
 }
@@ -132,6 +138,7 @@ else if (Convars.GetFloat("asw_skill") == 4) //insane
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
+	Convars.SetValue("asw_difficulty_alien_health_step", 1);
 	Convars.SetValue("rd_prespawn_scale", 0);
 	PointBonus = 0.8;
 }
@@ -146,6 +153,18 @@ else if (Convars.GetFloat("asw_skill") == 5) //brutal
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 10);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
+	Convars.SetValue("asw_difficulty_alien_health_step", 0);
+	Convars.SetValue("asw_drone_health", 88);
+	Convars.SetValue("asw_ranger_health", 222);
+	Convars.SetValue("asw_drone_uber_health", 1300);
+	Convars.SetValue("asw_shaman_health", 129);
+	Convars.SetValue("rd_harvester_health", 440);
+	Convars.SetValue("rd_mortarbug_health", 770);
+	Convars.SetValue("rd_parasite_health", 55);
+	Convars.SetValue("rd_parasite_defanged_health", 22);
+	Convars.SetValue("rd_shieldbug_health", 2200);
+	Convars.SetValue("sk_asw_buzzer_health", 66);
+	Convars.SetValue("sk_antlionguard_health", 1000);
 	Convars.SetValue("rd_prespawn_scale", 0);
 }
 
