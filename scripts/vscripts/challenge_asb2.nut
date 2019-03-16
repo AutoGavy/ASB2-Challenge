@@ -172,7 +172,7 @@ function Update()
 {
 	SaveDataCounter += UpdateBaseDelay;
 	
-	if (SaveDataCounter >= 3)
+	if (SaveDataCounter >= 10)
 		SaveData();
 	
 	if (firstUpdateRun)
@@ -709,7 +709,7 @@ function SortAlienName(alien_class)
 		case "asw_mortarbug":
 			return " was killed by a Mortarbug.";
 		case "asw_drone_uber":
-			return " was killed by a Uber Drone.";
+			return " was killed by an Uber Drone.";
 		case "npc_antlionguard_normal":
 			return " tried to race with an Antlionguard.";
 		case "npc_antlionguard_cavern":
@@ -883,7 +883,8 @@ function ShowKills()
 					ShowKillsHelper(i, y);
 					break;
 				}
-				ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + KillArray[y] + " kills.");
+				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + KillArray[y] + " kills.");
 			}
 			ClientPrint(PlayerArray[i], 3, "You have: " + KillArray[i] + " kills.");
 		}
@@ -914,7 +915,8 @@ function ShowKillsHelper(i, y)
 		{
 			if (y == i || NameArray[y] == null)
 				continue;
-			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + KillArray[y] + " kills.");
+			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + KillArray[y] + " kills.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -952,7 +954,8 @@ function ShowShots()
 					ShowShotsHelper(i, y);
 					break;
 				}
-				ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + ShotArray[y] + " shots.");
+				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + ShotArray[y] + " shots.");
 			}
 			ClientPrint(PlayerArray[i], 3, "You have: " + ShotArray[i] + " shots.");
 		}
@@ -983,7 +986,8 @@ function ShowShotsHelper(i, y)
 		{
 			if (y == i || NameArray[y] == null)
 				continue;
-			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + ShotArray[y] + " shots.");
+			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + ShotArray[y] + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1021,7 +1025,8 @@ function ShowDeaths()
 					ShowDeathsHelper(i, y);
 					break;
 				}
-				ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + DeathArray[y] + " deaths.");
+				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + DeathArray[y] + " deaths.");
 			}
 			ClientPrint(PlayerArray[i], 3, "You have: " + DeathArray[i] + " deaths.");
 		}
@@ -1052,7 +1057,8 @@ function ShowDeathsHelper(i, y)
 		{
 			if (y == i || NameArray[y] == null)
 				continue;
-			ClientPrint(PlayerArray[i], 3, NameArray[y] + " has " + DeathArray[y] + " deaths.");
+			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + DeathArray[y] + " deaths.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
