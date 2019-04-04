@@ -29,7 +29,6 @@ Convars.SetValue("asw_marine_burn_time_hard", 60);
 Convars.SetValue("asw_marine_burn_time_insane", 60);
 Convars.SetValue("rd_override_allow_rotate_camera", 1);
 Convars.SetValue("rd_increase_difficulty_by_number_of_marines", 0);
-Convars.SetValue("rm_prespawn_num_biomass", 1);
 
 const strDelimiter = ":";
 const MessageShowDelay = 1.0;
@@ -50,6 +49,7 @@ PlayerArray <- array(16, null);
 MarineArray <- array(16, null);
 NameArray <- array(16, null);
 MineArray <- array(16, null);
+AmmoArray <- array(16, null);
 PointArray <- array(16, 0);
 KillArray <- array(16, 0);
 ShotArray <- array(16, 0);
@@ -57,6 +57,7 @@ DeathArray <- array(16, 0);
 BSkin <- array(16, true);
 BMineHat <- array(16, true);
 BTail <- array(16, true);
+BAmmo <- array(16, true);
 n_AutoGavy <- null;
 
 timer_LowerBound <- 2.2;
@@ -93,7 +94,8 @@ if (Convars.GetFloat("asw_skill") == 1) //easy
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 1);
+	Convars.SetValue("asw_difficulty_alien_health_step", 0.3);
+	Convars.SetValue("rm_prespawn_num_biomass", 1);
 	Convars.SetValue("rd_prespawn_scale", 1);
 	PointBonus = 0.1;
 }
@@ -108,7 +110,8 @@ else if (Convars.GetFloat("asw_skill") == 2) //normal
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 1);
+	Convars.SetValue("asw_difficulty_alien_health_step", 0.3);
+	Convars.SetValue("rm_prespawn_num_biomass", 1);
 	Convars.SetValue("rd_prespawn_scale", 2);
 	PointBonus = 0.2;
 }
@@ -124,6 +127,7 @@ else if (Convars.GetFloat("asw_skill") == 3) //hard
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
 	Convars.SetValue("asw_difficulty_alien_health_step", 1);
+	Convars.SetValue("rm_prespawn_num_biomass", 1);
 	Convars.SetValue("rd_prespawn_scale", 1);
 	PointBonus = 0.4;
 }
@@ -139,7 +143,7 @@ else if (Convars.GetFloat("asw_skill") == 4) //insane
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
 	Convars.SetValue("asw_difficulty_alien_health_step", 1);
-	Convars.SetValue("rd_prespawn_scale", 0);
+	Convars.SetValue("rm_prespawn_num_biomass", 0);
 	PointBonus = 0.8;
 }
 else if (Convars.GetFloat("asw_skill") == 5) //brutal
@@ -165,7 +169,7 @@ else if (Convars.GetFloat("asw_skill") == 5) //brutal
 	Convars.SetValue("rd_shieldbug_health", 2200);
 	Convars.SetValue("sk_asw_buzzer_health", 66);
 	Convars.SetValue("sk_antlionguard_health", 1000);
-	Convars.SetValue("rd_prespawn_scale", 0);
+	Convars.SetValue("rm_prespawn_num_biomass", 0);
 }
 
 function Update()
@@ -236,6 +240,15 @@ function OnGameEvent_entity_killed(params)
 		{
 			PlantIncendiaryMine(MineArray[victim].GetOrigin(), MineArray[victim].GetAngles());
 			MineArray[victim].Destroy();
+		}
+		
+		if (victim != 128 && !BAmmo[victim])
+		{
+			local ammo = Entities.CreateByClassname("asw_ammo_drop");
+			ammo.__KeyValueFromInt("percent_remaining", 20);
+			ammo.SetOrigin(AmmoArray[victim].GetOrigin() + Vector(0, 0, -32));
+			ammo.Spawn();
+			AmmoArray[victim].Destroy();
 		}
 		
 		if (victim != 128 && h_inflictor != null)
@@ -368,11 +381,12 @@ function OnGameEvent_player_say(params)
 			break;
 		case "&help2":
 			ShowMessage("&shot  -  Display each player's shots.\n&death  -  Display each player's deaths.");
-			ShowMessage("&skin  -  Give a black skin to player who has over 2000 points.");
-			ShowMessage("&mine  -  Give a Flame Mine hat to player who has over 4000 points.\nPage 2/3     Type &help3 to see next page.");
+			ShowMessage("&skin  -  Give a black skin to player who has over 10000 points.");
+			ShowMessage("&mine  -  Give a Flame Mine hat to player who has over 20000 points.\nPage 2/3     Type &help3 to see next page.");
 			break;
 		case "&help3":
-			ShowMessage("&tail  -  Give a rocket tail to player who has over 8000 points.");
+			ShowMessage("&tail  -  Give a rocket tail to player who has over 40000 points.");
+			ShowMessage("&ammo  -  Give an Ammo Backpack to player who has over 80000 points.");
 			ShowMessage("&ctr  -  See ASB2 Challenge Creator.\n~Have Fun!\nPage 3/3     Type &help to see previous page.");
 			break;
 		case "&pts":
@@ -401,6 +415,9 @@ function OnGameEvent_player_say(params)
 			break;
 		case "&tail":
 			SetTail();
+			break;
+		case "&ammo":
+			SetAmmo();
 			break;
 	}
 }
@@ -727,35 +744,35 @@ function ReckonPoints(alien_class)
 	switch(alien_class)
 	{
 		case "asw_drone":
-			return 10;
+			return 2;
 		case "asw_buzzer":
-			return 5;
+			return 1;
 		case "asw_parasite":
-			return 10;
+			return 2;
 		case "asw_shieldbug":
-			return 30;
+			return 8;
 		case "asw_drone_jumper":
-			return 10;
+			return 2;
 		case "asw_harvester":
-			return 25;
-		case "asw_parasite_defanged":
 			return 5;
+		case "asw_parasite_defanged":
+			return 1;
 		case "asw_queen":
-			return 40;
-		case "asw_boomer":
-			return 25;
-		case "asw_ranger":
-			return 15;
-		case "asw_mortarbug":
-			return 25;
-		case "asw_drone_uber":
 			return 20;
+		case "asw_boomer":
+			return 5;
+		case "asw_ranger":
+			return 3;
+		case "asw_mortarbug":
+			return 5;
+		case "asw_drone_uber":
+			return 2;
 		case "npc_antlionguard_normal":
-			return 35;
+			return 12;
 		case "npc_antlionguard_cavern":
-			return 35;
+			return 12;
 		case "asw_egg":
-			return 15;
+			return 2;
 	}
 	return 5;
 }
@@ -1072,7 +1089,7 @@ function SetSkin()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BSkin[i] && PointArray[i] >= 2000 && MarineArray[i] != null)
+		if (BSkin[i] && PointArray[i] >= 10000 && MarineArray[i] != null)
 		{
 			MarineArray[i].__KeyValueFromString("rendercolor", "0,0,0");
 			BSkin[i] = false;
@@ -1087,7 +1104,7 @@ function SetMineHat()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BMineHat[i] && PointArray[i] >= 4000 && MarineArray[i] != null)
+		if (BMineHat[i] && PointArray[i] >= 20000 && MarineArray[i] != null)
 		{
 			MineArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin() + Vector(0, 0, 68), "models/items/mine/mine.mdl", 1);
 			
@@ -1096,7 +1113,6 @@ function SetMineHat()
 			EntFireByHandle(MineArray[i], "SetAnimation", "BindPose", 0, self, self);
 			EntFireByHandle(MineArray[i], "DisableShadow", "", 0, marine, marine);
 			EntFireByHandle(MineArray[i], "SetParent", "!activator", 0, marine, marine);
-			EntFireByHandle(MineArray[i], "FireUser1", "", 0, marine, marine);
 			
 			BMineHat[i] = false;
 			count++;
@@ -1110,7 +1126,7 @@ function SetTail()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BTail[i] && PointArray[i] >= 8000 && MarineArray[i] != null)
+		if (BTail[i] && PointArray[i] >= 40000 && MarineArray[i] != null)
 		{
 			local particle = Entities.CreateByClassname("info_particle_system");
 			particle.__KeyValueFromString("effect_name", "rocket_trail_small_glow");
@@ -1137,6 +1153,50 @@ function SetTail()
 		}
 	}
 	ShowMessage("Done for " + count + " players.");
+}
+
+function SetAmmo()
+{
+	local count = 0;
+	for (local i = 0; i < PlayersCounter; i++)
+	{
+		if (BAmmo[i] && PointArray[i] >= 80000 && MarineArray[i] != null)
+		{
+			AmmoArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin(), "models/items/ammobag/ammobag.mdl", 1);
+			
+			local marine = MarineArray[i];
+			EntFireByHandle(AmmoArray[i], "SetDefaultAnimation", "BindPose", 0, marine, marine);
+			EntFireByHandle(AmmoArray[i], "SetAnimation", "BindPose", 0, self, self);
+			EntFireByHandle(AmmoArray[i], "DisableShadow", "", 0, marine, marine);
+			EntFireByHandle(AmmoArray[i], "SetParent", "!activator", 0, marine, marine);
+			EntFireByHandle(AmmoArray[i], "SetParentAttachment", "jump_jet_r", 0, null, marine)
+			PropLocalRotate(AmmoArray[i]);
+			
+			BAmmo[i] = false;
+			count++;
+		}
+	}
+	ShowMessage("Done for " + count + " players.");
+}
+
+function PropLocalRotate(prop)
+{
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", 0.01);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	
+	timer.GetScriptScope().prop <- prop;
+	timer.GetScriptScope().TimerFunc <- function()
+	{
+		if (prop != null && prop.IsValid())
+			prop.SetLocalAngles(0, 0, 90);
+		
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
 function ParticlePrecache(effect)

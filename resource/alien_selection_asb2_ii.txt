@@ -123,6 +123,17 @@
 		"VScript"	"drone_ranger_carrier"
 		}
 	}
+	"PRESPAWN" {
+		"SelectionWeight"	"1"
+		"NPC" {
+		"AlienClass"	"asw_drone_jumper"
+		"VScript"	"drone_t75_carrier"
+		"HealthBonus"	"1202"
+		"SpeedScale"	"0.3"
+		"SizeScale"	"1.3"
+		"Flammable"	"0"
+		}
+	}
 	"PACK" {
 		"SelectionWeight"	"1"
 		"NPC" {
