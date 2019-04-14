@@ -1,2 +1,2 @@
-Convars.SetValue("rd_carnage_scale", 2);
+Convars.SetValue("rd_prespawn_scale", 1);
 IncludeScript("challenge_asb2.nut");

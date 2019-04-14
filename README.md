@@ -45,7 +45,7 @@ Playing in higher difficulty will get more points.
 
 Some of above game settings are refered to ASBI PRO(Eerie-Eg) and jihad Server(wildcat).
 
-This addon includes 3 challenge: ASB2, ASB2 Carnage x2, ASB2 II
+This addon includes 3 challenge: ASB2, ASB2 Prespawn x1, ASB2 II
 
 ASB2 Beta Gameplay Video: http://www.bilibili.com/video/av22789674
 This video is recorded from ASB2 Beta, not the lastest version. Such as Slowmotion Time is changed in the lastest version.

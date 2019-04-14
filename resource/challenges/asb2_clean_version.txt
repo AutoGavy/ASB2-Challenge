@@ -1,7 +1,7 @@
 "CHALLENGE"
 {
-	"name"	"ASB2 Carnage x2"
-	"description"	"Easy will enable speedy drones and MAW, Normal means MAW Heavy, Hard means ASB2 + MAW, Insane and Brutal are vanilla ASB2. Carnage x2 (8 players mode)."
+	"name"	"ASB2 Prespawn x1"
+	"description"	"Easy will enable speedy drones and MAW, Normal means MAW Heavy, Hard means ASB2 + MAW, Insane and Brutal are vanilla ASB2. Prespawn x1."
 
 	"convars"
 	{
