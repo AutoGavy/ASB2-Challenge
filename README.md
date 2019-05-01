@@ -23,27 +23,18 @@ Changes from regular ASBI:
 - Drones acceleration is back
 - Slowmotion Time - 77% (II Only)
 - Harder wire hacks (II Only)
-- Enabled camera rotation(Alien Biomass will ignite from blast damage)
+- Enabled camera rotation
+- Alien Biomass will be ignited from Flares
 - Removed map's weapon requirement
-- Added 2 new aliens (II Only)
 - Reduced Buzzer's attack interval (II Only)
-- More Alien Spawns in random (II Only)
 - Enables OnFire Settings when there's a player/bot using flamerthrower
+- Easy and Normal Difficulty are not allowed
 
 - About the Counting System:
 If you kill a drone, you will receive points. If you are hit by drones, you will lose points.
 Different drone has different points.
 If you hit or kill a marine, you will lose points.(Based on damage)
 Playing in higher difficulty will get more points.
-
-- Different difficulty has different settings:
-1. Easy - Very fast drones + Prespawn 1
-2. Normal - Vanilla brutal drone's speed + Prespawn 2
-3. Hard - ASB2 + Prepsawn 1
-4. Insane, Brutal - ASB2 (Prespawn 1 when in II)
-*Prespawn is something like Carnage.
-
-Some of above game settings are refered to ASBI PRO(Eerie-Eg) and jihad Server(wildcat).
 
 This addon includes 3 challenge: ASB2, ASB2 Prespawn x1, ASB2 II
 

@@ -1,7 +1,7 @@
 "CHALLENGE"
 {
 	"name"	"ASB2"
-	"description"	"Easy will enable speedy drones and MAW, Normal means MAW Heavy, Hard means ASB2 + MAW, Insane and Brutal are vanilla ASB2."
+	"description"	"Easy and Normal are not allowed."
 
 	"convars"
 	{
@@ -10,11 +10,10 @@
 		"rd_ready_mark_override"					"1"
 		"asw_sentry_friendly_fire_scale"			"1"
 		"asw_marine_ff_absorption"				"0"
-		"rd_biomass_ignite_from_explosions"	"1"
 		"rd_biomass_ignite_from_flares"		"1"
 		"rd_weapon_requirement_override"		"1"
 		"rd_override_allow_rotate_camera"		"1"
 		"rd_increase_difficulty_by_number_of_marines"	"0"
-		"rm_prespawn_num_biomass"			"1"
+		"rm_prespawn_num_biomass"			"0"
 	}
 }

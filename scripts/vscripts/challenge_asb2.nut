@@ -30,20 +30,24 @@ Convars.SetValue("asw_marine_burn_time_insane", 60);
 Convars.SetValue("rd_override_allow_rotate_camera", 1);
 Convars.SetValue("rd_increase_difficulty_by_number_of_marines", 0);
 
+const intVersion = 1;
 const strDelimiter = ":";
 const MessageShowDelay = 1.0;
 const thirdUpdateRunDelay = 0.5;
-const forthUpdateRunDelay = 30.0;
 const UpdateBaseDelay = 2.0;
-PointBonus <- 1;
+const SavaDataDelay = 15;
+const StopFunc = 5000;
+SavaDataCounter <- 0;
 PlayersCounter <- 0;
-SaveDataCounter <- 0;
 
 firstUpdateRun <- true;
 secondaryUpdateRun <- true;
 thirdUpdateRun <- true;
 forthUpdateRun <- true;
 FlamerDetected <- false;
+bMissionStatus <- true;
+bMissionFailed <- false;
+b3Checks <- true;
 
 PlayerArray <- array(16, null);
 MarineArray <- array(16, null);
@@ -54,11 +58,15 @@ PointArray <- array(16, 0);
 KillArray <- array(16, 0);
 ShotArray <- array(16, 0);
 DeathArray <- array(16, 0);
+temp_KillArray <- array(16, 0);
+temp_ShotArray <- array(16, 0);
+temp_DeathArray <- array(16, 0);
 BSkin <- array(16, true);
 BMineHat <- array(16, true);
 BTail <- array(16, true);
 BAmmo <- array(16, true);
 n_AutoGavy <- null;
+marinesTable <- {};
 
 timer_LowerBound <- 2.2;
 timer_UpperBound <- 4.0;
@@ -85,8 +93,8 @@ alienNamesArray <- [
 
 if (Convars.GetFloat("asw_skill") == 1) //easy
 {
-	Convars.SetValue("asw_marine_speed_scale_easy", 1.048);
-	Convars.SetValue("asw_alien_speed_scale_easy", 2.25);
+	Convars.SetValue("asw_marine_speed_scale_easy", 0.96);
+	Convars.SetValue("asw_alien_speed_scale_easy", 0.7);
 	Convars.SetValue("asw_drone_acceleration", 5);
 	Convars.SetValue("asw_horde_interval_min", 10);
 	Convars.SetValue("asw_horde_interval_max", 30);
@@ -95,14 +103,11 @@ if (Convars.GetFloat("asw_skill") == 1) //easy
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
 	Convars.SetValue("asw_difficulty_alien_health_step", 0.3);
-	Convars.SetValue("rm_prespawn_num_biomass", 1);
-	Convars.SetValue("rd_prespawn_scale", 1);
-	PointBonus = 0.1;
 }
 else if (Convars.GetFloat("asw_skill") == 2) //normal
 {
-	Convars.SetValue("asw_marine_speed_scale_normal", 1.048);
-	Convars.SetValue("asw_alien_speed_scale_normal", 1.2);
+	Convars.SetValue("asw_marine_speed_scale_normal", 1.0);
+	Convars.SetValue("asw_alien_speed_scale_normal", 1.0);
 	Convars.SetValue("asw_drone_acceleration", 5);
 	Convars.SetValue("asw_horde_interval_min", 15);
 	Convars.SetValue("asw_horde_interval_max", 60);
@@ -111,9 +116,6 @@ else if (Convars.GetFloat("asw_skill") == 2) //normal
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
 	Convars.SetValue("asw_difficulty_alien_health_step", 0.3);
-	Convars.SetValue("rm_prespawn_num_biomass", 1);
-	Convars.SetValue("rd_prespawn_scale", 2);
-	PointBonus = 0.2;
 }
 else if (Convars.GetFloat("asw_skill") == 3) //hard
 {
@@ -126,10 +128,7 @@ else if (Convars.GetFloat("asw_skill") == 3) //hard
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 1);
-	Convars.SetValue("rm_prespawn_num_biomass", 1);
-	Convars.SetValue("rd_prespawn_scale", 1);
-	PointBonus = 0.4;
+	Convars.SetValue("asw_difficulty_alien_health_step", 0.2);
 }
 else if (Convars.GetFloat("asw_skill") == 4) //insane
 {
@@ -142,9 +141,7 @@ else if (Convars.GetFloat("asw_skill") == 4) //insane
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 1);
-	Convars.SetValue("rm_prespawn_num_biomass", 0);
-	PointBonus = 0.8;
+	Convars.SetValue("asw_difficulty_alien_health_step", 0.2);
 }
 else if (Convars.GetFloat("asw_skill") == 5) //brutal
 {
@@ -169,43 +166,56 @@ else if (Convars.GetFloat("asw_skill") == 5) //brutal
 	Convars.SetValue("rd_shieldbug_health", 2200);
 	Convars.SetValue("sk_asw_buzzer_health", 66);
 	Convars.SetValue("sk_antlionguard_health", 1000);
-	Convars.SetValue("rm_prespawn_num_biomass", 0);
 }
 
 function Update()
 {
-	SaveDataCounter += UpdateBaseDelay;
+	CheckMissionComplete();
 	
-	if (SaveDataCounter >= 10)
+	if (b3Checks)
+	{
+		CheckDifficulty();
+		if (Convars.GetFloat("asw_skill") == 1 || Convars.GetFloat("asw_skill") == 2)
+			return StopFunc;
+		
+		if (firstUpdateRun)
+		{
+			Greeting();
+			firstUpdateRun = false;
+			return MessageShowDelay;
+		}
+		if (secondaryUpdateRun)
+		{
+			ReadPlayers();
+			ReadDataFile();
+			ShowAllPoints();
+			secondaryUpdateRun = false;
+			return thirdUpdateRunDelay;
+		}
+		if (thirdUpdateRun)
+		{
+			ShowMessageQuick("Current Map: " + GetMapName());
+			ShowMessageQuick("Type &help in main chat for more details.");
+			thirdUpdateRun = false;
+			b3Checks = false;
+			return UpdateBaseDelay;
+		}
+	}
+	
+	if (bMissionStatus && !bMissionFailed)
+	{
+		ReportStatus();
+		ShowMessageQuick("Mission Completed.");
+		return StopFunc;
+	}
+	
+	if (SavaDataCounter >= SavaDataDelay)
+	{
 		SaveData();
-	
-	if (firstUpdateRun)
-	{
-		Greeting();
-		firstUpdateRun = false;
-		return MessageShowDelay;
-	}
-	if (secondaryUpdateRun)
-	{
-		ReadPlayers();
-		ReadDataFile();
-		ShowAllPoints();
-		secondaryUpdateRun = false;
-		return thirdUpdateRunDelay;
-	}
-	if (thirdUpdateRun)
-	{
-		ShowMessageQuick("Current Map: " + GetMapName());
-		ShowMessageQuick("Type &help in main chat for more details.");
-		thirdUpdateRun = false;
-		return forthUpdateRunDelay;
-	}
-	if (forthUpdateRun)
-	{
-		forthUpdateRun = false;
-		return UpdateBaseDelay;
+		SavaDataCounter = 0;
 	}
 	
+	SavaDataCounter += UpdateBaseDelay;
 	return UpdateBaseDelay;
 }
 
@@ -220,6 +230,17 @@ function OnGameEvent_entity_killed(params)
 	
 	if (h_victim.GetClassname() == "asw_marine")
 	{
+		if (marinesTable.rawin(h_victim))
+		{
+			marinesTable.rawdelete(h_victim);
+			if (marinesTable.len() == 0)
+			{
+				bMissionFailed = true;
+				//ShowMessageQuick("Mission Failed.");
+				ReportStatus();
+			}
+		}
+		
 		local victim = 128;
 		for (local i = 0; i < PlayersCounter; i++)
 		{
@@ -233,6 +254,7 @@ function OnGameEvent_entity_killed(params)
 		if (victim != 128)
 		{
 			DeathArray[victim]++;
+			temp_DeathArray[victim]++;
 			SaveData();
 		}
 		
@@ -289,7 +311,7 @@ function OnGameEvent_entity_killed(params)
 					b_isBot = false;
 					if (victim == i)
 					{
-						SetPoints(i, 100, 0);
+						ShowMessageLate("Console: o");
 						break;
 					}
 					if (victim == n_AutoGavy)
@@ -299,7 +321,6 @@ function OnGameEvent_entity_killed(params)
 						else
 							ShowMessage(AttackerName + " You killed ASB2 Creator!!!111");
 						
-						SetPoints(i, 100, 0);
 						break;
 					}
 					else
@@ -309,7 +330,6 @@ function OnGameEvent_entity_killed(params)
 						else
 							ShowMessage("Evil " + AttackerName + "!!!111");
 						
-						SetPoints(i, 100, 0);
 						break;
 					}
 				}
@@ -344,7 +364,7 @@ function OnGameEvent_entity_killed(params)
 				ShowMessage(NameArray[victim] + " was burned alive.");
 		}
 		//else
-		//	ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
+		//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
 		
 		return;
 	}
@@ -363,6 +383,7 @@ function OnGameEvent_entity_killed(params)
 		
 		SetPoints(attacker, ReckonPoints(h_victim.GetClassname()), 1);
 		KillArray[attacker]++;
+		temp_KillArray[attacker]++;
 	}
 }
 
@@ -462,7 +483,7 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 			if (victim == 128)
 				return damage;
 			
-			SetPoints(victim, (ReckonPoints(h_attacker.GetClassname()) / 2).tointeger(), 0);
+			SetPoints(victim, ReckonPoints(h_attacker.GetClassname()), 0);
 		}
 	}
 	
@@ -542,7 +563,7 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 				return damage;
 			
 			if (h_victim.GetMarineName() != h_attacker.GetMarineName())
-				SetPoints(attacker, (damage / 2).tointeger(), 0);
+				SetPoints(attacker, damage.tointeger(), 0);
 		}
 		else if (weapon != null && h_victim.IsAlien() && weapon.GetClassname() == "asw_weapon_tesla_gun")
 		{
@@ -586,7 +607,52 @@ function OnGameEvent_weapon_fire(params)
 				return;
 			
 			ShotArray[i]++;
+			temp_ShotArray[i]++;
 			return;
+		}
+	}
+}
+
+function CheckDifficulty()
+{
+	local CurrentDiff = Convars.GetFloat("asw_skill");
+	local strDiff;
+	
+	if (CurrentDiff == 1)
+		strDiff = "Easy";
+	else if (CurrentDiff == 2)
+		strDiff = "Normal";
+	else
+		return;
+	
+	ShowMessage(strDiff + " difficulty is not allowed in ASB2.");
+	
+	local gs_timer = Entities.CreateByClassname("logic_timer");
+	gs_timer.__KeyValueFromFloat("RefireTime", 3.5);
+	DoEntFire("!self", "Disable", "", 0, null, gs_timer);
+	gs_timer.ValidateScriptScope();
+	local gs_timerScope = gs_timer.GetScriptScope();
+	
+	gs_timerScope.TimerFunc <- function()
+	{
+		Director.RestartMission();
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	gs_timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, gs_timer);
+}
+
+function CheckMissionComplete()
+{
+	bMissionStatus = false;
+	local MissionManager = null;
+	while((MissionManager = Entities.FindByClassname(MissionManager, "asw_objective")) != null)
+	{
+		if (NetProps.GetPropInt(MissionManager, "m_bComplete") == 1)
+		{
+			bMissionStatus = false;
+			//break;
 		}
 	}
 }
@@ -602,8 +668,8 @@ function ReadDataFile()
 			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
 			local FileReader = FileToString(FileName);
 
-			if (FileReader == "")
-				StringToFile(FileName,  "0:0:0:0");
+			if (FileReader == "" || (split(FileReader, strDelimiter)).len() == 4)
+				StringToFile(FileName,  "0:0:0:0:1");
 			else
 			{
 				local strArrayContent = split(FileReader, strDelimiter);
@@ -625,10 +691,9 @@ function SaveData()
 			local BaseFileName = split(PlayerArray[i].GetNetworkIDString(), ":");
 			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
 			
-			StringToFile(FileName, PointArray[i].tostring() + strDelimiter + KillArray[i].tostring() + strDelimiter + ShotArray[i].tostring() + strDelimiter + DeathArray[i].tostring());
+			StringToFile(FileName, PointArray[i].tostring() + strDelimiter + KillArray[i].tostring() + strDelimiter + ShotArray[i].tostring() + strDelimiter + DeathArray[i].tostring() + strDelimiter + intVersion);
 		}
 	}
-	SaveDataCounter = 0;
 }
 
 function Greeting()
@@ -659,6 +724,10 @@ function ReadPlayers()
 		}
 		PlayersCounter++;
 	}
+	
+	local c_marine = null;
+	while((c_marine = Entities.FindByClassname(c_marine, "asw_marine")) != null)
+		marinesTable[c_marine] <- c_marine;
 }
 
 function ShowMessage(message)
@@ -682,6 +751,28 @@ function ShowMessage(message)
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
+function ShowMessageLate(message)
+{
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", 0.6);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	local timerScope = timer.GetScriptScope();
+	
+	timerScope.message <- message;
+	timerScope.TimerFunc <- function()
+	{
+		local player = null;
+		while((player = Entities.FindByClassname(player, "player")) != null)
+			ClientPrint(player, 3, message);
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+
 function ShowMessageQuick(message)
 {
 	local player = null;
@@ -689,12 +780,12 @@ function ShowMessageQuick(message)
 		ClientPrint(player, 3, message);
 }
 
-function SetPoints(player_index, points, action) //0 to reduce, 1 to add
+function SetPoints(player_index, points, action) //0 to take, 1 to add
 {
 	if (action)
-		PointArray[player_index] += (points * PointBonus).tointeger();
+		PointArray[player_index] += points;
 	else
-		PointArray[player_index] -= (points * PointBonus).tointeger();
+		PointArray[player_index] -= points;
 }
 
 function SortAlienName(alien_class)
@@ -775,6 +866,81 @@ function ReckonPoints(alien_class)
 			return 2;
 	}
 	return 5;
+}
+
+function ReportStatus()
+{
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", 1);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	local timerScope = timer.GetScriptScope();
+	
+	timerScope.PlayersCounter <- PlayersCounter;
+	timerScope.PlayerArray <- PlayerArray;
+	timerScope.NameArray <- NameArray;
+	timerScope.temp_KillArray <- temp_KillArray;
+	timerScope.temp_ShotArray <- temp_ShotArray;
+	timerScope.temp_DeathArray <- temp_DeathArray;
+	timerScope.ReportStatusHelper <- ReportStatusHelper;
+	timerScope.TimerFunc <- function()
+	{
+		local readMarker = 0;
+		for (local i = 0; i < PlayersCounter; i++)
+		{
+			for (local y = 0; y < PlayersCounter; y++)
+			{
+				if (y == i || NameArray[y] == null)
+					continue;
+				else
+					readMarker++;
+				if (readMarker > 4)
+				{
+					ReportStatusHelper(i, y);
+					break;
+				}
+				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " got " + temp_KillArray[y] + " kills, " + temp_ShotArray[i] + " shots, " + temp_DeathArray[i] + " deaths.");
+			}
+			ClientPrint(PlayerArray[i], 3, "You got: " + temp_KillArray[i] + " kills, " + temp_ShotArray[i] + " shots, " + temp_DeathArray[i] + " deaths.");
+		}
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+function ReportStatusHelper(i, y)
+{
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", 2.5);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	local timerScope = timer.GetScriptScope();
+	
+	timerScope.PlayersCounter <- PlayersCounter;
+	timerScope.PlayerArray <- PlayerArray;
+	timerScope.temp_NameArray <- temp_NameArray;
+	timerScope.temp_KillArray <- temp_KillArray;
+	timerScope.temp_ShotArray <- temp_ShotArray;
+	timerScope.DeathArray <- DeathArray;
+	timerScope.i <- i;
+	timerScope.y <- y;
+	timerScope.TimerFunc <- function()
+	{
+		for (; y < PlayersCounter; y++)
+		{
+			if (y == i || NameArray[y] == null)
+				continue;
+			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
+				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " got " + temp_KillArray[y] + " kills, " + temp_ShotArray[i] + " shots, " + temp_DeathArray[i] + " deaths.");
+		}
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
 function ShowAllPoints()
@@ -1104,7 +1270,7 @@ function SetMineHat()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BMineHat[i] && PointArray[i] >= 20000 && MarineArray[i] != null)
+		if (!BAmmo[i] && BMineHat[i] && PointArray[i] >= 20000 && MarineArray[i] != null)
 		{
 			MineArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin() + Vector(0, 0, 68), "models/items/mine/mine.mdl", 1);
 			
@@ -1160,7 +1326,7 @@ function SetAmmo()
 	local count = 0;
 	for (local i = 0; i < PlayersCounter; i++)
 	{
-		if (BAmmo[i] && PointArray[i] >= 80000 && MarineArray[i] != null)
+		if (!BMineHat[i] && BAmmo[i] && PointArray[i] >= 80000 && MarineArray[i] != null)
 		{
 			AmmoArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin(), "models/items/ammobag/ammobag.mdl", 1);
 			
