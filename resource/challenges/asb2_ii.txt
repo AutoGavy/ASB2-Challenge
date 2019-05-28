@@ -1,6 +1,6 @@
 "CHALLENGE"
 {
-	"name"	"ASB2 II"
+	"name"	"ASB2 - PRO Edtion"
 	"description"	"Easy and Normal are not allowed."
 
 	"convars"

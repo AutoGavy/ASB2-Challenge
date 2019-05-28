@@ -1,4 +1,4 @@
-# ASB2 II - Alien Swarm Beyond Brutal II
+# ASB² - Alien Swarm Beyond Brutal II
 
 Origin ASBI in Alien Swarm Creator: Honk
 Origin ASB2 in Alien Swarm Creator: Zak
@@ -17,26 +17,38 @@ Changes from regular ASBI:
 7. Show each player's kills
 8. Show each player's shots
 9. Show each player's deaths
-10. Points Gifts
+10. Show each player's status
+11. Alien Biomass will be ignited from Flares
+12. Drones acceleration is back
+13. Easy and Normal Difficulty are not allowed
+14. Removed map's weapon requirement
+15. Enabled camera rotation
+13. Points Gifts: Black Skin, Rocket Tail, Flame Mine Backpack, Ammo Backpack, Free Flares and Marine Scale.
+*Each gift only can be used once in each round, and costs 100 points for using.
 
-- Enabled two sided hordes (II Only)
-- Drones acceleration is back
-- Slowmotion Time - 77% (II Only)
-- Harder wire hacks (II Only)
-- Enabled camera rotation
-- Alien Biomass will be ignited from Flares
-- Removed map's weapon requirement
-- Reduced Buzzer's attack interval (II Only)
+Challenge includes 2 new versions:
+
+ASB2 - PRO Edtion
+- Enabled two sided hordes
+- Slowmotion Time - 77%
+- Harder wire hacks
+- Reduced Buzzer's attack interval
 - Enables OnFire Settings when there's a player/bot using flamerthrower
-- Easy and Normal Difficulty are not allowed
+- All buttons and computers require a hack, new-added hacking do not require a tech marine.
+- Alien Spawns when hacking
 
-- About the Counting System:
-If you kill a drone, you will receive points. If you are hit by drones, you will lose points.
-Different drone has different points.
-If you hit or kill a marine, you will lose points.(Based on damage)
-Playing in higher difficulty will get more points.
+ASB2 - Nova Edtion (uncompleted)
+- Working in progress
 
-This addon includes 3 challenge: ASB2, ASB2 Prespawn x1, ASB2 II
+How to get points:
+- Kill aliens
+- Complete a mission
+- Heal your teammates
+- Using Tesla Gun to attack aliens
+- Kill Boss (Nova Edtion)
 
-ASB2 Beta Gameplay Video: http://www.bilibili.com/video/av22789674
-This video is recorded from ASB2 Beta, not the lastest version. Such as Slowmotion Time is changed in the lastest version.
+How will lose points:
+- Sucide with a Grenade Launcher
+- Being hit by aliens
+- Kill a teammates (based on FF)
+- Give points to Smart Marine (Nova Edtion)

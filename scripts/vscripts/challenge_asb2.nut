@@ -1,13 +1,3 @@
-ifFirstRun <- true;
-if (ifFirstRun)
-{
-	Entities.First().ValidateScriptScope();
-	g_worldspawnScope <- Entities.First().GetScriptScope();
-	local MainTimersTable = {};
-	g_worldspawnScope.MainTimersTable <- MainTimersTable;
-	ifFirstRun = false;	
-}
-
 Convars.SetValue("asw_batch_interval", 3);
 Convars.SetValue("asw_realistic_death_chatter", 1);
 Convars.SetValue("asw_marine_ff", 2);
@@ -35,43 +25,24 @@ const strDelimiter = ":";
 const MessageShowDelay = 1.0;
 const thirdUpdateRunDelay = 0.5;
 const UpdateBaseDelay = 2.0;
-const SavaDataDelay = 15;
 const StopFunc = 5000;
-SavaDataCounter <- 0;
-PlayersCounter <- 0;
+PlayerCounter <- 0;
 
 firstUpdateRun <- true;
 secondaryUpdateRun <- true;
 thirdUpdateRun <- true;
 forthUpdateRun <- true;
 FlamerDetected <- false;
-bMissionStatus <- true;
-bMissionFailed <- false;
 b3Checks <- true;
+bInPRO <- false;
 
-PlayerArray <- array(16, null);
-MarineArray <- array(16, null);
-NameArray <- array(16, null);
-MineArray <- array(16, null);
-AmmoArray <- array(16, null);
-PointArray <- array(16, 0);
-KillArray <- array(16, 0);
-ShotArray <- array(16, 0);
-DeathArray <- array(16, 0);
-temp_KillArray <- array(16, 0);
-temp_ShotArray <- array(16, 0);
-temp_DeathArray <- array(16, 0);
-BSkin <- array(16, true);
-BMineHat <- array(16, true);
-BTail <- array(16, true);
-BAmmo <- array(16, true);
 n_AutoGavy <- null;
-marinesTable <- {};
 
 timer_LowerBound <- 2.2;
 timer_UpperBound <- 4.0;
 victimSpeedBoosted <- 1.6;
 
+PlayerManager <- [];
 alienNamesArray <- [
 "asw_drone",
 "asw_buzzer",
@@ -90,6 +61,110 @@ alienNamesArray <- [
 "npc_antlionguard_normal",
 "npc_antlionguard_cavern"
 ];
+
+class cPlayer
+{
+	constructor(vplayer, vpoints = 0, vkills = 0, vshots = 0, vdeaths = 0)
+	{
+		player = vplayer;
+		points = vpoints;
+		deaths = vdeaths;
+		tkills = vkills;
+		tshots = vshots;
+
+		if (vplayer != null)
+		{
+			name = vplayer.GetPlayerName();
+			id = vplayer.GetNetworkIDString();
+			
+			local hmarine = NetProps.GetPropEntity(player, "m_hMarine");
+			if (hmarine != null)
+				marine = hmarine;
+		}
+	}
+	
+	tkills = 0;
+	tshots = 0;
+	points = 0;
+	deaths = 0;
+	kills = 0;
+	shots = 0;
+	bskin = true;
+	bmine = true;
+	btail = true;
+	bammo = true;
+	bsurvived = true;
+	bflare = true;
+	bscale = true;
+	bHasSkin = 0;
+	bHasTail = 0;
+	bHasMine = 0;
+	bHasAmmo = 0;
+	bHasScale = 0;
+	player = null;
+	name = null;
+	marine = null;
+	id = null;
+	index = null;
+	hammo = null;
+	hmine = null;
+	status = "Survived."
+	
+	function HasSkin(val)
+	{
+		if (val)
+			bHasSkin = 1;
+		else
+			bHasSkin = 0;
+		Save();
+	}
+	function HasTail(val)
+	{
+		if (val)
+			bHasTail = 1;
+		else
+			bHasTail = 0;
+		Save();
+	}
+	function HasMine(val)
+	{
+		if (val)
+			bHasMine = 1;
+		else
+			bHasMine = 0;
+		Save();
+	}
+	function HasAmmo(val)
+	{
+		if (val)
+			bHasAmmo = 1;
+		else
+			bHasAmmo = 0;
+		Save();
+	}
+	function HasScale(val)
+	{
+		bHasScale = val;
+		Save();
+	}
+	function Save()
+	{
+		local BaseFileName = split(id, ":");
+		local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
+		
+		StringToFile(FileName, points.tostring() + strDelimiter + tkills.tostring() + strDelimiter + tshots.tostring() + strDelimiter + deaths.tostring() + strDelimiter + intVersion + strDelimiter + bHasSkin.tostring() + strDelimiter + bHasTail.tostring() + strDelimiter + bHasMine.tostring() + strDelimiter + bHasAmmo.tostring() + strDelimiter + bHasScale.tostring());
+	}
+}
+
+ifFirstRun <- true;
+if (ifFirstRun)
+{
+	Entities.First().ValidateScriptScope();
+	g_worldspawnScope <- Entities.First().GetScriptScope();
+	local MainTimersTable = {};
+	g_worldspawnScope.MainTimersTable <- MainTimersTable;
+	ifFirstRun = false;	
+}
 
 if (Convars.GetFloat("asw_skill") == 1) //easy
 {
@@ -170,8 +245,6 @@ else if (Convars.GetFloat("asw_skill") == 5) //brutal
 
 function Update()
 {
-	CheckMissionComplete();
-	
 	if (b3Checks)
 	{
 		CheckDifficulty();
@@ -186,204 +259,162 @@ function Update()
 		}
 		if (secondaryUpdateRun)
 		{
+			ASB2SetUp();
 			ReadPlayers();
 			ReadDataFile();
-			ShowAllPoints();
+			SetGifts();
+			GreetShowAllPoints();
 			secondaryUpdateRun = false;
 			return thirdUpdateRunDelay;
 		}
 		if (thirdUpdateRun)
 		{
-			ShowMessageQuick("Current Map: " + GetMapName());
-			ShowMessageQuick("Type &help in main chat for more details.");
+			DisplayMsg("Current Map: " + GetMapName(), 0);
+			DisplayMsg("Type &help in main chat for more details.", 0);
 			thirdUpdateRun = false;
 			b3Checks = false;
+			CheckMissionComplete();
 			return UpdateBaseDelay;
 		}
 	}
-	
-	if (bMissionStatus && !bMissionFailed)
-	{
-		ReportStatus();
-		ShowMessageQuick("Mission Completed.");
-		return StopFunc;
-	}
-	
-	if (SavaDataCounter >= SavaDataDelay)
-	{
-		SaveData();
-		SavaDataCounter = 0;
-	}
-	
-	SavaDataCounter += UpdateBaseDelay;
-	return UpdateBaseDelay;
+
+	return StopFunc;
 }
 
 function OnGameEvent_entity_killed(params)
 {
-	local h_victim = EntIndexToHScript(params["entindex_killed"]);
-	local h_attacker = EntIndexToHScript(params["entindex_attacker"]);
-	local h_inflictor = EntIndexToHScript(params["entindex_inflictor"]);
-
-	if (!h_attacker || !h_victim)
-		return;
+	local h_victim = null;
+	local h_attacker = null;
+	local h_inflictor = null;
 	
+	if ("entindex_killed" in params)
+		h_victim = EntIndexToHScript(params["entindex_killed"]);
+	if ("entindex_attacker" in params)
+		h_attacker = EntIndexToHScript(params["entindex_attacker"]);
+	if ("entindex_inflictor" in params)
+		h_inflictor = EntIndexToHScript(params["entindex_inflictor"]);
+	
+	if (!h_victim)
+		return;
+
+	local victimIndex = null;
+	local attackerIndex = null;
 	if (h_victim.GetClassname() == "asw_marine")
 	{
-		if (marinesTable.rawin(h_victim))
+		if (h_victim.IsInhabited())
+			victimIndex = GetPlayerIndex(h_victim.GetCommander());
+		
+		if (victimIndex != null)
 		{
-			marinesTable.rawdelete(h_victim);
-			if (marinesTable.len() == 0)
-			{
-				bMissionFailed = true;
-				//ShowMessageQuick("Mission Failed.");
-				ReportStatus();
-			}
+			PlayerManager[victimIndex].deaths++;
+			PlayerManager[victimIndex].status = "Not survived.";
+			PlayerManager[victimIndex].bsurvived = false;
 		}
 		
-		local victim = 128;
-		for (local i = 0; i < PlayersCounter; i++)
+		if (victimIndex != null && !PlayerManager[victimIndex].bmine)
 		{
-			local VictimName = NameArray[i];
-			if (VictimName == "none")
-				continue;
-			if (h_victim.GetMarineName() == VictimName)
-				victim = i;
+			PlantIncendiaryMine(h_victim.GetOrigin(), h_victim.GetAngles());
+			PlayerManager[victimIndex].hmine.Destroy();
 		}
 		
-		if (victim != 128)
-		{
-			DeathArray[victim]++;
-			temp_DeathArray[victim]++;
-			SaveData();
-		}
-		
-		if (victim != 128 && !BMineHat[victim])
-		{
-			PlantIncendiaryMine(MineArray[victim].GetOrigin(), MineArray[victim].GetAngles());
-			MineArray[victim].Destroy();
-		}
-		
-		if (victim != 128 && !BAmmo[victim])
+		if (victimIndex != null && !PlayerManager[victimIndex].bammo)
 		{
 			local ammo = Entities.CreateByClassname("asw_ammo_drop");
 			ammo.__KeyValueFromInt("percent_remaining", 20);
-			ammo.SetOrigin(AmmoArray[victim].GetOrigin() + Vector(0, 0, -32));
+			ammo.SetOrigin(PlayerManager[victimIndex].hammo.GetOrigin() + Vector(0, 0, -32));
 			ammo.Spawn();
-			AmmoArray[victim].Destroy();
+			PlayerManager[victimIndex].hammo.Destroy();
 		}
 		
-		if (victim != 128 && h_inflictor != null)
+		if (victimIndex != null && h_inflictor != null  && PlayerManager[victimIndex].player != null)
 		{
 			if (h_inflictor.GetClassname() == "asw_burning")
 			{
-				if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
-					ShowMessage(PlayerArray[victim].GetPlayerName() + " was burned alive.");
+				if (PlayerManager[victimIndex].player != null)
+					DisplayMsg(PlayerManager[victimIndex].name + " was burned alive.");
 				else
-					ShowMessage(NameArray[victim] + " was burned alive.");
+					DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + " was burned alive.");
 				
 				return;
 			}
 		}
 		
+		if (!h_attacker)
+			return;
+
 		if (h_attacker.GetClassname() == "asw_marine")
 		{
-			/*
-			if (h_attacker.GetMarineName() == h_victim.GetMarineName() && victim == 128)
-			{
-				ShowMessage("That dead marine has no pts because it is a robot!");
-				return;
-			}
-			else if (h_attacker.GetMarineName() == h_victim.GetMarineName())
-			{
-				ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
-				return;
-			}
-			*/
+			if (h_attacker.IsInhabited())
+				attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
 			
-			local b_isBot = true;
-			for (local i = 0; i < PlayersCounter; i++)
+			if (attackerIndex == null)
+				DisplayMsg("Evil Robot!");
+			else if (victimIndex == attackerIndex)
 			{
-				local AttackerName = NameArray[i];
-				
-				if (h_attacker.GetMarineName() == AttackerName)
-				{
-					b_isBot = false;
-					if (victim == i)
-					{
-						ShowMessageLate("Console: o");
-						break;
-					}
-					if (victim == n_AutoGavy)
-					{
-						if (PlayerArray[i] != null && PlayerArray[i].GetPlayerName() != null)
-							ShowMessage(PlayerArray[i].GetPlayerName() + " You killed ASB2 Creator!!!111");
-						else
-							ShowMessage(AttackerName + " You killed ASB2 Creator!!!111");
-						
-						break;
-					}
-					else
-					{
-						if (PlayerArray[i] != null && PlayerArray[i].GetPlayerName() != null)
-							ShowMessage("Evil " + PlayerArray[i].GetPlayerName() + "!!!111");
-						else
-							ShowMessage("Evil " + AttackerName + "!!!111");
-						
-						break;
-					}
-				}
+				DisplayMsg("Console: o", 0.06);
+				if (h_inflictor != null && h_inflictor.GetClassname() == "asw_grenade_cluster")
+					SetPoints(attackerIndex, 30, 0);
 			}
-			if (b_isBot)
-				ShowMessage("Evil Robot!");
+			else if (victimIndex == n_AutoGavy)
+			{
+				DisplayMsg(PlayerManager[attackerIndex].name + " Extremly Evil !!!111");
+				SetPoints(attackerIndex, 100, 0);
+			}
+			else
+			{
+				if (PlayerManager[attackerIndex].player != null && PlayerManager[attackerIndex].player != null)
+					DisplayMsg("Evil " + PlayerManager[attackerIndex].name + "!!!111");
+				else
+					DisplayMsg("Evil " + PlayerManager[attackerIndex].marine.GetMarineName() + "!!!111");
+			}
 		}
-		else if (victim == 128)
-		{
-			//ShowMessage("This Marine has no pts because it is a robot!");
+		else if (victimIndex == null || PlayerManager[victimIndex].player == null)
 			return;
-		}
 		else if (h_attacker.IsAlien())
 		{
-			if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
-				ShowMessage(PlayerArray[victim].GetPlayerName() + SortAlienName(h_attacker.GetClassname()));
+			if (PlayerManager[victimIndex].player != null)
+				DisplayMsg(PlayerManager[victimIndex].name + GetAlienName(h_attacker.GetClassname()));
 			else
-				ShowMessage(NameArray[victim] + SortAlienName(h_attacker.GetClassname()));
+				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + GetAlienName(h_attacker.GetClassname()));
 		}
 		else if (h_attacker.GetClassname() == "asw_trigger_fall")
 		{
-			if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
-				ShowMessage(PlayerArray[victim].GetPlayerName() + " has fallen to his demise.");
+			if (h_victim.IsInhabited())
+			{
+				if (PlayerManager[victimIndex].player != null)
+				{
+					if (PlayerManager[victimIndex].marine.GetMarineName() == "Wildcat" || PlayerManager[victimIndex].marine.GetMarineName() == "Faith")
+						DisplayMsg(PlayerManager[victimIndex].name + " has fallen to her demise.");
+					else
+						DisplayMsg(PlayerManager[victimIndex].name + " has fallen to his demise.");	
+				}
+			}
+			else if (PlayerManager[victimIndex].marine.GetMarineName() == "Wildcat" || PlayerManager[victimIndex].marine.GetMarineName() == "Faith")
+				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + " has fallen to her demise.");
 			else
-				ShowMessage(NameArray[victim] + " has fallen to his demise.");
+				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + " has fallen to his demise.");
 		}
 		else if (h_attacker.GetClassname() == "env_fire")
 		{
-			if (PlayerArray[victim] != null && PlayerArray[victim].GetPlayerName() != null)
-				ShowMessage(PlayerArray[victim].GetPlayerName() + " was burned alive.");
+			if (PlayerManager[victimIndex].player != null)
+				DisplayMsg(PlayerManager[victimIndex].name + " was burned alive.");
 			else
-				ShowMessage(NameArray[victim] + " was burned alive.");
+				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + " was burned alive.");
 		}
-		//else
-		//ShowMessage(NameArray[victim] + " has a total of " + PointArray[victim] + " pts.");
 		
+		SaveData();
 		return;
 	}
 	
-	if (h_attacker.GetClassname() == "asw_marine" && h_victim.IsAlien())
+	if (h_attacker != null && h_attacker.GetClassname() == "asw_marine" && h_victim.IsAlien())
 	{
-		local attacker = 128;
-		for (local i = 0; i < PlayersCounter; i++)
+		if (h_attacker.IsInhabited())
 		{
-			local AttackerName = NameArray[i];
-			if (h_attacker.GetMarineName() == AttackerName)
-				attacker = i;
+			attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
+			SetPoints(attackerIndex, ReckonPoints(h_victim.GetClassname()), 1);
+			PlayerManager[attackerIndex].tkills++;
+			PlayerManager[attackerIndex].kills++;
 		}
-		if (attacker == 128)
-			return;
-		
-		SetPoints(attacker, ReckonPoints(h_victim.GetClassname()), 1);
-		KillArray[attacker]++;
-		temp_KillArray[attacker]++;
 	}
 }
 
@@ -394,52 +425,83 @@ function OnGameEvent_player_say(params)
 	else if (params["text"] == null)
 		return;
 	
-	switch ((params["text"]).tolower())
+	const strAND = "&";
+	local strText = params["text"].tolower();
+	local speakerID = null;
+	if (("userid" in params))
+		speakerID = params["userid"];
+	
+	switch (strText)
 	{
 		case "&help":
-			ShowMessage("==== List of Chat Commands ====\n&map  -  Display the current map name.\n&pts  -  Display each player's points.");
-			ShowMessage("&kill  -  Display each player's kills.\nPage 1/3     Type &help2 to see next page.");
-			break;
+			DisplayMsg("==== List of Chat Commands ====\n&map  -  Display the current map name.\n&pts  -  Display each player's points.");
+			DisplayMsg("&kill  -  Display each player's kills.\nPage 1/4     Type &help2 to see next page.");
+			return;
 		case "&help2":
-			ShowMessage("&shot  -  Display each player's shots.\n&death  -  Display each player's deaths.");
-			ShowMessage("&skin  -  Give a black skin to player who has over 10000 points.");
-			ShowMessage("&mine  -  Give a Flame Mine hat to player who has over 20000 points.\nPage 2/3     Type &help3 to see next page.");
-			break;
+			DisplayMsg("&cancel  -  Cancel all gift effects.");
+			DisplayMsg("&shot  -  Display each player's shots.\n&death  -  Display each player's deaths.");
+			DisplayMsg("&mine  -  Get a Flame Mine Backpack. 200 deaths required.\nPage 2/4     Type &help3 to see next page.");
+			return;
 		case "&help3":
-			ShowMessage("&tail  -  Give a rocket tail to player who has over 40000 points.");
-			ShowMessage("&ammo  -  Give an Ammo Backpack to player who has over 80000 points.");
-			ShowMessage("&ctr  -  See ASB2 Challenge Creator.\n~Have Fun!\nPage 3/3     Type &help to see previous page.");
-			break;
+			DisplayMsg("&skin  -  Get a black skin. 100 deaths required.\n&tail  -  Get a rocket tail. 10000 kills required.");
+			DisplayMsg("&ammo  -  Get an Ammo Backpack. 10000 shots required");
+			DisplayMsg("&flare - Get a flare which can illuminate or burn biomass. 20000 shots required.\nPage 3/4     Type &help4 to see next page.");
+			return;
+		case "&help4":
+			DisplayMsg("&small / &big - Scale your marine size. 20000 kills required.\n&status  -  Report current players' status.");
+			DisplayMsg("~Have Fun!\nPage 4/4     Type &help3 to see previous page.");
+			return;
+		case "&map":
+			DisplayMsg("Current Map: " + GetMapName());
+			return;
+		case "&status":
+			ReportStatus();
+			return;
+		case "&cancel":
+			CancelGifts(speakerID);
+			return;
 		case "&pts":
 			ShowAllPointsLate();
-			break;
+			return;
 		case "&kill":
 			ShowKills();
-			break;
+			return;
 		case "&shot":
 			ShowShots();
-			break;
+			return;
 		case "&death":
 			ShowDeaths();
-			break;
-		case "&map":
-			ShowMessage("Current Map: " + GetMapName());
-			break;
-		case "&ctr":
-			ShowMessage("ASB2 Challenge is made by AutoGavy. You can report any bugs on the workshop page.");
-			break;
-		case "&skin":
-			SetSkin();
-			break;
-		case "&mine":
-			SetMineHat();
-			break;
-		case "&tail":
-			SetTail();
-			break;
-		case "&ammo":
-			SetAmmo();
-			break;
+			return;
+	}
+	if (strText.find(strAND, 0) != null)
+	{
+		foreach (strCmd in split(strText, strAND))
+		{
+			switch (strCmd)
+			{
+				case "skin":
+					SetSkin(speakerID);
+					break;
+				case "mine":
+					SetMinePack(speakerID);
+					break;
+				case "tail":
+					SetTail(speakerID);
+					break;
+				case "ammo":
+					SetAmmo(speakerID);
+					break;
+				case "flare":
+					SetFlare(speakerID);
+					break;
+				case "small":
+					SetScale(speakerID, 1);
+					break;
+				case "big":
+					SetScale(speakerID, 2);
+					break;
+			}
+		}
 	}
 }
 
@@ -461,7 +523,7 @@ function TimerFunc()
 
 function VictimDeathFunc()
 {
-	//self.DisconnectOutput("OnDeath", "VictimDeathFunc");
+	self.DisconnectOutput("OnDeath", "VictimDeathFunc"); //error?
 	timer.DisconnectOutput("OnTimer", "TimerFunc");
 	timer.Destroy();
 	delete g_worldspawnScope.MainTimersTable[self];
@@ -473,17 +535,14 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 	{
 		if (h_victim != null && h_victim.GetClassname() == "asw_marine")
 		{
-			local victim = 128;
-			for (local i = 0; i < PlayersCounter; i++)
-			{
-				local VictimName = NameArray[i];
-				if (h_victim.GetMarineName() == VictimName)
-					victim = i;
-			}
-			if (victim == 128)
+			local victimIndex = null;
+			if (h_victim.IsInhabited())
+				victimIndex = GetPlayerIndex(h_victim.GetCommander());
+			
+			if (victimIndex == null)
 				return damage;
 			
-			SetPoints(victim, ReckonPoints(h_attacker.GetClassname()), 0);
+			SetPoints(victimIndex, ReckonPoints(h_attacker.GetClassname()), 0);
 		}
 	}
 	
@@ -527,56 +586,32 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 	
 	if (h_attacker != null && h_attacker.GetClassname() == "asw_marine")
 	{
-		if (!FlamerDetected && inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
+		local attackerIndex = null;
+		if (h_attacker.IsInhabited())
+			attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
+		
+		if (bInPRO && !FlamerDetected && inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
 		{
-			local attacker = 128;
-			for (local i = 0; i < PlayersCounter; i++)
-			{
-				local AttackerName = NameArray[i];
-				if (h_attacker.GetMarineName() == AttackerName)
-					attacker = i;
-			}
-			
 			if (weapon != null && weapon.GetClassname() == "asw_weapon_flamer")
 			{
 				local FlamerUserName = "A Robot";
 				
-				if (attacker != 128)
-					FlamerUserName = PlayerArray[attacker].GetPlayerName();
+				if (attackerIndex != null)
+					FlamerUserName =PlayerManager[attackerIndex].name;
 					
-				ShowMessageQuick("Flamethrower Detected! The First User: " + FlamerUserName + ".");
-				ShowMessage("OnFire Settings Enabled.");
+				DisplayMsg("Flamethrower Detected! The First User: " + FlamerUserName + ".", 0);
+				DisplayMsg("OnFire Settings Enabled.");
 				FlamerDetected = true;
 			}
 		}
 		
 		if (h_victim != null && h_victim.GetClassname() == "asw_marine")
 		{
-			local attacker = 128;
-			for (local i = 0; i < PlayersCounter; i++)
-			{
-				local AttackerName = NameArray[i];
-				if (h_attacker.GetMarineName() == AttackerName)
-					attacker = i;
-			}
-			if (attacker == 128)
+			if (attackerIndex != null)
 				return damage;
 			
 			if (h_victim.GetMarineName() != h_attacker.GetMarineName())
-				SetPoints(attacker, damage.tointeger(), 0);
-		}
-		else if (weapon != null && h_victim.IsAlien() && weapon.GetClassname() == "asw_weapon_tesla_gun")
-		{
-			local attacker = 128;
-			for (local i = 0; i < PlayersCounter; i++)
-			{
-				local AttackerName = NameArray[i];
-				if (h_attacker.GetMarineName() == AttackerName)
-					attacker = i;
-			}
-			if (attacker == 128)
-				return damage;
-			SetPoints(attacker, 1, 1);
+				SetPoints(attackerIndex, damage.tointeger(), 0);
 		}
 	}
 	return damage;
@@ -584,33 +619,31 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 
 function OnGameEvent_player_heal(params)
 {
-	for (local i = 0; i < PlayersCounter; i++)
-	{
-		if (NameArray[i] == "Faith" || NameArray[i] == "Bastille")
-			SetPoints(i, 1, 1);
-	}
+	if (("userid" in params))
+		if (params["userid"] != null)
+			SetPoints(GetPlayerIndex(GetPlayerFromUserID(params["userid"])), 1, 1);
 }
 
 function OnGameEvent_weapon_fire(params)
 {
-	local marine = EntIndexToHScript(params["marine"]);
-	local weapon = EntIndexToHScript(params["weapon"]);
+	local marine = null;
+	local weapon = null;
 	
-	if (!marine || !weapon)
+	if ("marine" in params)
+		marine = EntIndexToHScript(params["marine"]);
+	if ("weapon" in params)
+		weapon = EntIndexToHScript(params["weapon"]);
+
+	if (!marine.IsInhabited() || !marine || !weapon)
 		return;
+	else if (weapon.GetClassname() == "asw_weapon_heal_gun" || weapon.GetClassname() == "asw_weapon_heal_grenade" || weapon.GetClassname() == "asw_weapon_medical_satchel" || weapon.GetClassname() == "asw_weapon_ammo_bag" || weapon.GetClassname() == "asw_weapon_ammo_satchel" || weapon.GetClassname() == "asw_weapon_chainsaw" || weapon.GetClassname() == "asw_weapon_mining_laser" || weapon.GetClassname() == "asw_weapon_sentry" || weapon.GetClassname() == "asw_weapon_sentry_flamer" || weapon.GetClassname() == "asw_weapon_sentry_freeze" || weapon.GetClassname() == "asw_weapon_sentry_cannon")
+		return;
+	else if (weapon.GetClassname() == "asw_weapon_tesla_gun")
+		SetPoints(GetPlayerIndex(marine.GetCommander()), 1, 1);
 	
-	for (local i = 0; i < PlayersCounter; i++)
-	{
-		if (marine.GetMarineName() == NameArray[i])
-		{
-			if (weapon.GetClassname() == "asw_weapon_heal_gun" || weapon.GetClassname() == "asw_weapon_heal_grenade" || weapon.GetClassname() == "asw_weapon_medical_satchel" || weapon.GetClassname() == "asw_weapon_ammo_bag" || weapon.GetClassname() == "asw_weapon_ammo_satchel" || weapon.GetClassname() == "asw_weapon_chainsaw" || weapon.GetClassname() == "asw_weapon_mining_laser" || weapon.GetClassname() == "asw_weapon_sentry" || weapon.GetClassname() == "asw_weapon_sentry_flamer" || weapon.GetClassname() == "asw_weapon_sentry_freeze" || weapon.GetClassname() == "asw_weapon_sentry_cannon")
-				return;
-			
-			ShotArray[i]++;
-			temp_ShotArray[i]++;
-			return;
-		}
-	}
+	PlayerManager[GetPlayerIndex(marine.GetCommander())].tshots++;
+	PlayerManager[GetPlayerIndex(marine.GetCommander())].shots++;
+	return;
 }
 
 function CheckDifficulty()
@@ -625,7 +658,7 @@ function CheckDifficulty()
 	else
 		return;
 	
-	ShowMessage(strDiff + " difficulty is not allowed in ASB2.");
+	DisplayMsg(strDiff + " difficulty is not allowed in ASB2.", 0);
 	
 	local gs_timer = Entities.CreateByClassname("logic_timer");
 	gs_timer.__KeyValueFromFloat("RefireTime", 3.5);
@@ -643,152 +676,350 @@ function CheckDifficulty()
 	DoEntFire("!self", "Enable", "", 0, null, gs_timer);
 }
 
-function CheckMissionComplete()
+function ASB2SetUp()
 {
-	bMissionStatus = false;
-	local MissionManager = null;
-	while((MissionManager = Entities.FindByClassname(MissionManager, "asw_objective")) != null)
+	if (!bInPRO)
+		return;
+	
+	local hButton = null;
+	local hComputer = null;
+	local hDoor = null;
+	while ((hButton = Entities.FindByClassname(hButton, "trigger_asw_button_area")) != null)
 	{
-		if (NetProps.GetPropInt(MissionManager, "m_bComplete") == 1)
+		if (hButton.GetKeyValue("locked").tointeger() == 0)
 		{
-			bMissionStatus = false;
-			//break;
-		}
-	}
-}
-
-//Data File: Points, Kills, Shots, Deaths
-function ReadDataFile()
-{
-	for (local i = 0; i < PlayersCounter; i++)
-	{
-		if (PlayerArray[i] != null && MarineArray[i] != null)
-		{
-			local BaseFileName = split(PlayerArray[i].GetNetworkIDString(), ":");
-			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
-			local FileReader = FileToString(FileName);
-
-			if (FileReader == "" || (split(FileReader, strDelimiter)).len() == 4)
-				StringToFile(FileName,  "0:0:0:0:1");
-			else
-			{
-				local strArrayContent = split(FileReader, strDelimiter);
-				PointArray[i] = strArrayContent[0].tointeger();
-				KillArray[i] = strArrayContent[1].tointeger();
-				ShotArray[i] = strArrayContent[2].tointeger();
-				DeathArray[i] = strArrayContent[3].tointeger();
-			}
-		}
-	}
-}
-
-function SaveData()
-{
-	for (local i = 0; i < PlayersCounter; i++)
-	{
-		if (PlayerArray[i] != null && MarineArray[i] != null)
-		{
-			local BaseFileName = split(PlayerArray[i].GetNetworkIDString(), ":");
-			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
+			hButton.__KeyValueFromInt("locked", 1);
+			hButton.__KeyValueFromInt("needstech", 0);
+			hButton.__KeyValueFromInt("useafterhack", 1);
 			
-			StringToFile(FileName, PointArray[i].tostring() + strDelimiter + KillArray[i].tostring() + strDelimiter + ShotArray[i].tostring() + strDelimiter + DeathArray[i].tostring() + strDelimiter + intVersion);
+			hButton.ValidateScriptScope();
+			local buttonScope = hButton.GetScriptScope();
+
+			buttonScope.hButton <- hButton;
+			buttonScope.SpawnUberFunc <- function()
+			{
+				Director.SpawnAlienAuto("asw_mortarbug");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				self.DisconnectOutput("OnButtonHackStarted", "SpawnUberFunc");
+			}
+			buttonScope.SpawnFunc <- function()
+			{
+				Director.SpawnAlienAuto("asw_drone_uber");
+				Director.SpawnAlienAuto("asw_harvester");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				self.DisconnectOutput("OnButtonHackAt50Percent", "SpawnFunc");
+			}
+			
+			hButton.ConnectOutput("OnButtonHackStarted", "SpawnUberFunc");
+			hButton.ConnectOutput("OnButtonHackAt50Percent", "SpawnFunc");
 		}
 	}
-}
-
-function Greeting()
-{
-	local player = null;
-	while((player = Entities.FindByClassname(player, "player")) != null)
+	while ((hComputer = Entities.FindByClassname(hComputer, "trigger_asw_computer_area")) != null)
 	{
-		if (player.GetNetworkIDString() == "STEAM_1:0:176990841") //AutoGavy
-			ClientPrint(player, 3, "=д= ASB2 Creator!");
-		else
-			ClientPrint(player, 3, "Welcome to ASB2 game mode, " + player.GetPlayerName() + ".");
+		if (hComputer.GetKeyValue("locked").tointeger() == 0)
+		{
+			hComputer.__KeyValueFromInt("locked", 1);
+			
+			hComputer.ValidateScriptScope();
+			local computerScope = hComputer.GetScriptScope();
+ 
+			computerScope.hComputer <- hComputer;
+			computerScope.SpawnUberFunc <- function()
+			{
+				Director.SpawnAlienAuto("asw_mortarbug");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				self.DisconnectOutput("OnComputerHackStarted", "SpawnUberFunc");
+			}
+			computerScope.SpawnFunc <- function()
+			{
+				Director.SpawnAlienAuto("asw_drone_uber");
+				Director.SpawnAlienAuto("asw_harvester");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				Director.SpawnAlienAuto("asw_drone");
+				self.DisconnectOutput("OnComputerHackHalfway", "SpawnFunc");
+			}
+			
+			hComputer.ConnectOutput("OnComputerHackStarted", "SpawnUberFunc");
+			hComputer.ConnectOutput("OnComputerHackHalfway", "SpawnFunc");
+		}
+	}
+	while ((hDoor = Entities.FindByClassname(hDoor, "asw_door")) != null)
+	{
+		if (hDoor.GetKeyValue("autoopen").tointeger() == 1)
+		{
+			hDoor.__KeyValueFromInt("autoopen", 0);
+			
+			hDoor.ValidateScriptScope();
+			local doorScope = hDoor.GetScriptScope();
+			
+			doorScope.hDoor <- hDoor;
+			doorScope.AdjustAutoOpenFunc <- function()
+			{
+				hDoor.__KeyValueFromInt("autoopen", 1);
+				self.DisconnectOutput("OnFullyOpen", "AdjustAutoOpenFunc");
+			}
+			
+			hDoor.ConnectOutput("OnFullyOpen", "AdjustAutoOpenFunc");
+		}
 	}
 }
 
 function ReadPlayers()
 {
 	local player = null;
-	while((player = Entities.FindByClassname(player, "player")) != null)
+	while ((player = Entities.FindByClassname(player, "player")) != null)
 	{
 		if (player.GetNetworkIDString() == "STEAM_1:0:176990841") //AutoGavy
-			n_AutoGavy = PlayersCounter;
-		PlayerArray[PlayersCounter] = player;
-		local marine = NetProps.GetPropEntity(player, "m_hMarine");
-		if (marine != null)
+			n_AutoGavy = PlayerCounter;
+		PlayerManager.push(cPlayer(player));
+		PlayerCounter++;
+	}
+}
+
+//Data File: Points, Kills, Shots, Deaths, Version, HasSkin, HasTail, HasMine, HasAmmo, HasScale
+function ReadDataFile()
+{
+	foreach (val in PlayerManager)
+	{
+		if (val.player != null)
 		{
-			MarineArray[PlayersCounter] = marine;
-			NameArray[PlayersCounter] = marine.GetMarineName();
+			local BaseFileName = split(val.id, ":");
+			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
+			local FileReader = FileToString(FileName);
+
+			if (split(FileReader, strDelimiter).len() == 5)
+			{
+				local strArrayContent = split(FileReader, strDelimiter);
+				val.points = strArrayContent[0].tointeger();
+				val.tkills = strArrayContent[1].tointeger();
+				val.tshots = strArrayContent[2].tointeger();
+				val.deaths = strArrayContent[3].tointeger();
+				StringToFile(FileName, val.points.tostring() + strDelimiter + val.tkills.tostring() + strDelimiter + val.tshots.tostring() + strDelimiter + val.deaths.tostring() + strDelimiter + intVersion + strDelimiter + val.bHasSkin.tostring() + strDelimiter + val.bHasTail.tostring() + strDelimiter + val.bHasMine.tostring() + strDelimiter + val.bHasAmmo.tostring() + strDelimiter + val.bHasScale.tostring());
+			}
+			else if (split(FileReader, strDelimiter).len() == 10)
+			{
+				local strArrayContent = split(FileReader, strDelimiter);
+				val.points = strArrayContent[0].tointeger();
+				val.tkills = strArrayContent[1].tointeger();
+				val.tshots = strArrayContent[2].tointeger();
+				val.deaths = strArrayContent[3].tointeger();
+				val.bHasSkin = strArrayContent[5].tointeger();
+				val.bHasTail = strArrayContent[6].tointeger();
+				val.bHasMine = strArrayContent[7].tointeger();
+				val.bHasAmmo = strArrayContent[8].tointeger();
+				val.bHasScale = strArrayContent[9].tointeger();
+			}
+			else
+				StringToFile(FileName,  "0:0:0:0:1:0:0:0:0:0");
 		}
-		PlayersCounter++;
 	}
-	
-	local c_marine = null;
-	while((c_marine = Entities.FindByClassname(c_marine, "asw_marine")) != null)
-		marinesTable[c_marine] <- c_marine;
 }
 
-function ShowMessage(message)
+function SetGifts()
 {
-	local timer = Entities.CreateByClassname("logic_timer");
-	timer.__KeyValueFromFloat("RefireTime", 0.01);
-	DoEntFire("!self", "Disable", "", 0, null, timer);
-	timer.ValidateScriptScope();
-	local timerScope = timer.GetScriptScope();
-	
-	timerScope.message <- message;
-	timerScope.TimerFunc <- function()
+	foreach (val in PlayerManager)
 	{
-		local player = null;
-		while((player = Entities.FindByClassname(player, "player")) != null)
-			ClientPrint(player, 3, message);
-		self.DisconnectOutput("OnTimer", "TimerFunc");
-		self.Destroy();
+		if (val.player == null)
+			continue;
+		if (val.bHasSkin)
+			SetSkin(val.player.GetPlayerUserID());
+		if (val.bHasTail)
+			SetTail(val.player.GetPlayerUserID());
+		if (val.bHasMine)
+			SetMinePack(val.player.GetPlayerUserID());
+		if (val.bHasAmmo)
+			SetAmmo(val.player.GetPlayerUserID());
+		if (val.bHasScale != 0)
+			SetScale(val.player.GetPlayerUserID(), val.bHasScale);
 	}
-	timer.ConnectOutput("OnTimer", "TimerFunc");
-	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function ShowMessageLate(message)
+function CancelGifts(userid)
 {
-	local timer = Entities.CreateByClassname("logic_timer");
-	timer.__KeyValueFromFloat("RefireTime", 0.6);
-	DoEntFire("!self", "Disable", "", 0, null, timer);
-	timer.ValidateScriptScope();
-	local timerScope = timer.GetScriptScope();
+	if (userid == null)
+		return;
 	
-	timerScope.message <- message;
-	timerScope.TimerFunc <- function()
-	{
-		local player = null;
-		while((player = Entities.FindByClassname(player, "player")) != null)
-			ClientPrint(player, 3, message);
-		self.DisconnectOutput("OnTimer", "TimerFunc");
-		self.Destroy();
-	}
-	timer.ConnectOutput("OnTimer", "TimerFunc");
-	DoEntFire("!self", "Enable", "", 0, null, timer);
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.player == null)
+		return;
+	cTarget.HasSkin(false);
+	cTarget.HasTail(false);
+	cTarget.HasMine(false);
+	cTarget.HasAmmo(false);
+	cTarget.HasScale(0);
+	ClientPrint(cTarget.player, 3, "Done. Will take effect in the next round.");
 }
 
-
-function ShowMessageQuick(message)
+function ReloadPlayers()
 {
 	local player = null;
-	while((player = Entities.FindByClassname(player, "player")) != null)
-		ClientPrint(player, 3, message);
+	local strID = null;
+	while ((player = Entities.FindByClassname(player, "player")) != null)
+	{
+		local bNewPlayer = true;
+		strID = player.GetNetworkIDString();
+		foreach (index, val in PlayerManager)
+		{
+			if (strID == val.id)
+				bNewPlayer = false;
+			else
+			{
+				PlayerManager.remove(index);
+				bNewPlayer = false;
+			}
+			if (bNewPlayer)
+				PushPlayerClass(player);
+		}
+	}
 }
 
-function SetPoints(player_index, points, action) //0 to take, 1 to add
+function CheckPlayerIndex(player, index)
 {
-	if (action)
-		PointArray[player_index] += points;
-	else
-		PointArray[player_index] -= points;
+	local hmarine = NetProps.GetPropEntity(player, "m_hMarine");
+	if (PlayerManager[index].marine != hmarine)
+		PlayerManager[index].marine = hmarine;
 }
 
-function SortAlienName(alien_class)
+function PushPlayerClass(player)
+{
+	if (player != null)
+	{
+		local BaseFileName = split(player.GetNetworkIDString(), ":");
+		local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
+		local FileReader = FileToString(FileName);
+
+		if (split(FileReader, strDelimiter).len() == 5)
+		{
+			local strArrayContent = split(FileReader, strDelimiter);
+			val.points = strArrayContent[0].tointeger();
+			val.tkills = strArrayContent[1].tointeger();
+			val.tshots = strArrayContent[2].tointeger();
+			val.deaths = strArrayContent[3].tointeger();
+			StringToFile(FileName, val.points.tostring() + strDelimiter + val.tkills.tostring() + strDelimiter + val.tshots.tostring() + strDelimiter + val.deaths.tostring() + strDelimiter + intVersion + strDelimiter + val.bHasSkin.tostring() + strDelimiter + val.bHasTail.tostring() + strDelimiter + val.bHasMine.tostring() + strDelimiter + val.bHasAmmo.tostring() + strDelimiter + val.bHasScale.tostring());
+		}
+		else if (split(FileReader, strDelimiter).len() == 10)
+		{
+			local strArrayContent = split(FileReader, strDelimiter);
+			val.points = strArrayContent[0].tointeger();
+			val.tkills = strArrayContent[1].tointeger();
+			val.tshots = strArrayContent[2].tointeger();
+			val.deaths = strArrayContent[3].tointeger();
+			val.bHasSkin = strArrayContent[5].tointeger();
+			val.bHasTail = strArrayContent[6].tointeger();
+			val.bHasMine = strArrayContent[7].tointeger();
+			val.bHasAmmo = strArrayContent[8].tointeger();
+			val.bHasScale = strArrayContent[9].tointeger();
+		}
+		else
+			StringToFile(FileName,  "0:0:0:0:1:0:0:0:0:0");
+	}
+}
+
+function SaveData()
+{
+	foreach (val in PlayerManager)
+	{
+		if (val.player != null)
+		{
+			local BaseFileName = split(val.id, ":");
+			local FileName = "asb2data_" + BaseFileName[1] + BaseFileName[2];
+			
+			StringToFile(FileName, val.points.tostring() + strDelimiter + val.tkills.tostring() + strDelimiter + val.tshots.tostring() + strDelimiter + val.deaths.tostring() + strDelimiter + intVersion + strDelimiter + val.bHasSkin.tostring() + strDelimiter + val.bHasTail.tostring() + strDelimiter + val.bHasMine.tostring() + strDelimiter + val.bHasAmmo.tostring() + strDelimiter + val.bHasScale.tostring());
+		}
+	}
+}
+
+function GetPlayerIndex(player)
+{
+	local strID = player.GetNetworkIDString();
+	foreach (index, val in PlayerManager)
+	{
+		if (strID == val.id)
+		{
+			CheckPlayerIndex(player, index);
+			return index;
+		}
+	}
+	ReloadPlayers();
+	return fGetPlayerIndex(player);
+}
+
+function fGetPlayerIndex(player)
+{
+	local strID = player.GetNetworkIDString();
+	foreach (index, val in PlayerManager)
+	{
+		if (strID == val.id)
+		{
+			CheckPlayerIndex(player, index);
+			return index;
+		}
+	}
+	return _GetPlayerIndex(player);
+}
+
+function Greeting()
+{
+	local player = null;
+	while ((player = Entities.FindByClassname(player, "player")) != null)
+	{
+		if (player.GetNetworkIDString() == "STEAM_1:0:176990841") //AutoGavy
+			ClientPrint(player, 3, "=д= Challenge Creator!");
+		else
+			ClientPrint(player, 3, "Welcome to ASB2 game mode, " + player.GetPlayerName() + ".");
+	}
+}
+
+function DisplayMsg(message, delay = 0.01)
+{
+	if (!delay)
+	{
+		local player = null;
+		while ((player = Entities.FindByClassname(player, "player")) != null)
+			ClientPrint(player, 3, message);
+		return;
+	}
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", delay);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	local timerScope = timer.GetScriptScope();
+	
+	timerScope.message <- message;
+	timerScope.TimerFunc <- function()
+	{
+		local player = null;
+		while ((player = Entities.FindByClassname(player, "player")) != null)
+			ClientPrint(player, 3, message);
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+function SetPoints(index, points, action) //0 to take, 1 to add
+{
+	if (index == null)
+		return;
+	if (action)
+		PlayerManager[index].points += points;
+	else
+		PlayerManager[index].points -= points;
+}
+
+function GetAlienName(alien_class)
 {
 	switch(alien_class)
 	{
@@ -826,8 +1057,9 @@ function SortAlienName(alien_class)
 			return " ate an Alien Egg.";
 		case "asw_alien_goo":
 			return " was killed by an Alien Biomass.";
+		default:
+			return " was killed by an unknown alien.";
 	}
-	return " was killed by an unknown alien.";
 }
 
 function ReckonPoints(alien_class)
@@ -868,41 +1100,69 @@ function ReckonPoints(alien_class)
 	return 5;
 }
 
-function ReportStatus()
+function CheckMissionComplete()
+{
+    local EscObj = Entities.FindByClassname(null, "asw_objective_escape");
+    if (EscObj != null)
+    {
+        EscObj.ValidateScriptScope();
+        local ScopeEscObj = EscObj.GetScriptScope();
+        ScopeEscObj.ScopeChallengeFile <- self.GetScriptScope();
+       
+        ScopeEscObj.ObjFunc <- function()
+		{
+			ScopeChallengeFile.MissonCompleteFunc();
+		}
+       
+	   EscObj.ConnectOutput("OnObjectiveComplete", "ObjFunc");
+    }
+}
+
+function MissonCompleteFunc()
+{
+	DisplayMsg("Mission Completed.", 0.06);
+	ReportStatus(1);
+	foreach (index, val in PlayerManager)
+	{
+		if (val.marine != null && val.bsurvived)
+			SetPoints(index, 50, 1);
+	}
+	SaveData();
+}
+
+function ReportStatus(delay = 0.01)
 {
 	local timer = Entities.CreateByClassname("logic_timer");
-	timer.__KeyValueFromFloat("RefireTime", 1);
+	timer.__KeyValueFromFloat("RefireTime", delay);
 	DoEntFire("!self", "Disable", "", 0, null, timer);
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.temp_KillArray <- temp_KillArray;
-	timerScope.temp_ShotArray <- temp_ShotArray;
-	timerScope.temp_DeathArray <- temp_DeathArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.ReportStatusHelper <- ReportStatusHelper;
 	timerScope.TimerFunc <- function()
 	{
-		local readMarker = 0;
-		for (local i = 0; i < PlayersCounter; i++)
+		foreach (i, val in PlayerManager)
 		{
-			for (local y = 0; y < PlayersCounter; y++)
+			local readMarker = 0;
+			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || NameArray[y] == null)
+				if (y == i || _val.player == null)
 					continue;
-				else
-					readMarker++;
-				if (readMarker > 4)
+				
+				if (readMarker >= 4)
 				{
 					ReportStatusHelper(i, y);
 					break;
 				}
-				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " got " + temp_KillArray[y] + " kills, " + temp_ShotArray[i] + " shots, " + temp_DeathArray[i] + " deaths.");
+				if (val.player != null && _val.player != null)
+				{
+					ClientPrint(val.player, 3, _val.name + " got " + _val.kills + " kills, " + _val.shots + " shots. " + _val.status);
+					readMarker++;
+				}
 			}
-			ClientPrint(PlayerArray[i], 3, "You got: " + temp_KillArray[i] + " kills, " + temp_ShotArray[i] + " shots, " + temp_DeathArray[i] + " deaths.");
+			if (val.player != null)
+				ClientPrint(val.player, 3, "You got: " + val.kills + " kills, " + val.shots + " shots. " + val.status);
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -919,22 +1179,17 @@ function ReportStatusHelper(i, y)
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.temp_NameArray <- temp_NameArray;
-	timerScope.temp_KillArray <- temp_KillArray;
-	timerScope.temp_ShotArray <- temp_ShotArray;
-	timerScope.DeathArray <- DeathArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.i <- i;
 	timerScope.y <- y;
 	timerScope.TimerFunc <- function()
 	{
-		for (; y < PlayersCounter; y++)
+		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || NameArray[y] == null)
+			if (y == i || PlayerManager[y].player == null)
 				continue;
-			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " got " + temp_KillArray[y] + " kills, " + temp_ShotArray[i] + " shots, " + temp_DeathArray[i] + " deaths.");
+			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
+				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " got " + PlayerManager[y].kills + " kills, " + PlayerManager[y].shots + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -943,68 +1198,56 @@ function ReportStatusHelper(i, y)
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function ShowAllPoints()
+function GreetShowAllPoints()
 {
-	local readMarker = 0;
-	for (local i = 0; i < PlayersCounter; i++)
+	foreach (i, val in PlayerManager)
 	{
-		for (local y = 0; y < PlayersCounter; y++)
+		local readMarker = 0;
+		foreach (y, _val in PlayerManager)
 		{
-			if (y == i || NameArray[y] == null)
+			if (y == i || _val.player == null)
 				continue;
-			else
-				readMarker++;
-			if (readMarker > 4)
+			
+			if (readMarker >= 3)
 			{
 				ShowPointsHelper(i, y);
 				break;
 			}
-			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + PointArray[y] + " pts.");
+			if (val.player != null && _val.player != null)
+			{
+				ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
+				readMarker++;
+			}
 		}
-		ClientPrint(PlayerArray[i], 3, "You have: " + PointArray[i] + " pts.");
+		if (val.player != null)
+			ClientPrint(val.player, 3, "You have: " + val.points + " pts.");
 	}
 }
 
-function ShowAllPointsLate()
+function ShowAllPoints()
 {
-	local timer = Entities.CreateByClassname("logic_timer");
-	timer.__KeyValueFromFloat("RefireTime", 0.01);
-	DoEntFire("!self", "Disable", "", 0, null, timer);
-	timer.ValidateScriptScope();
-	local timerScope = timer.GetScriptScope();
-	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.PointArray <- PointArray;
-	timerScope.ShowPointsHelper <- ShowPointsHelper;
-	timerScope.TimerFunc <- function()
+	foreach (i, val in PlayerManager)
 	{
 		local readMarker = 0;
-		for (local i = 0; i < PlayersCounter; i++)
+		foreach (y, _val in PlayerManager)
 		{
-			for (local y = 0; y < PlayersCounter; y++)
+			if (y == i || _val.player == null)
+				continue;
+			
+			if (readMarker >= 4)
 			{
-				if (y == i || NameArray[y] == null)
-					continue;
-				else
-					readMarker++;
-				if (readMarker > 4)
-				{
-					ShowPointsHelper(i, y);
-					break;
-				}
-				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + PointArray[y] + " pts.");
+				ShowPointsHelper(i, y);
+				break;
 			}
-			ClientPrint(PlayerArray[i], 3, "You have: " + PointArray[i] + " pts.");
+			if (val.player != null && _val.player != null)
+			{
+				ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
+				readMarker++;
+			}
 		}
-		self.DisconnectOutput("OnTimer", "TimerFunc");
-		self.Destroy();
+		if (val.player != null)
+			ClientPrint(val.player, 3, "You have: " + val.points + " pts.");
 	}
-	timer.ConnectOutput("OnTimer", "TimerFunc");
-	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
 function ShowPointsHelper(i, y)
@@ -1015,20 +1258,58 @@ function ShowPointsHelper(i, y)
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.PointArray <- PointArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.i <- i;
 	timerScope.y <- y;
 	timerScope.TimerFunc <- function()
 	{
-		for (; y < PlayersCounter; y++)
+		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || NameArray[y] == null)
+			if (y == i || PlayerManager[y].player == null)
 				continue;
-			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + PointArray[y] + " pts.");
+			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
+				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].points + " pts.");
+		}
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+function ShowAllPointsLate()
+{
+	local timer = Entities.CreateByClassname("logic_timer");
+	timer.__KeyValueFromFloat("RefireTime", 0.01);
+	DoEntFire("!self", "Disable", "", 0, null, timer);
+	timer.ValidateScriptScope();
+	local timerScope = timer.GetScriptScope();
+	
+	timerScope.PlayerManager <- PlayerManager;
+	timerScope.ShowPointsHelper <- ShowPointsHelper;
+	timerScope.TimerFunc <- function()
+	{
+		foreach (i, val in PlayerManager)
+		{
+			local readMarker = 0;
+			foreach (y, _val in PlayerManager)
+			{
+				if (y == i || _val.player == null)
+					continue;
+				
+				if (readMarker >= 4)
+				{
+					ShowPointsHelper(i, y);
+					break;
+				}
+				if (val.player != null && _val.player != null)
+				{
+					ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
+					readMarker++;
+				}
+			}
+			if (val.player != null)
+				ClientPrint(val.player, 3, "You have: " + val.points + " pts.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1045,31 +1326,31 @@ function ShowKills()
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.KillArray <- KillArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.ShowKillsHelper <- ShowKillsHelper;
 	timerScope.TimerFunc <- function()
 	{
-		local readMarker = 0;
-		for (local i = 0; i < PlayersCounter; i++)
+		foreach (i, val in PlayerManager)
 		{
-			for (local y = 0; y < PlayersCounter; y++)
+			local readMarker = 0;
+			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || NameArray[y] == null)
+				if (y == i || _val.player == null)
 					continue;
-				else
-					readMarker++;
-				if (readMarker > 4)
+				
+				if (readMarker >= 4)
 				{
 					ShowKillsHelper(i, y);
 					break;
 				}
-				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + KillArray[y] + " kills.");
+				if (val.player != null && _val.player != null)
+				{
+					ClientPrint(val.player, 3, _val.name + " has " + _val.tkills + " kills.");
+					readMarker++;
+				}
 			}
-			ClientPrint(PlayerArray[i], 3, "You have: " + KillArray[i] + " kills.");
+			if (val.player != null)
+				ClientPrint(val.player, 3, "You have: " + val.tkills + " kills.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1086,20 +1367,17 @@ function ShowKillsHelper(i, y)
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.KillArray <- KillArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.i <- i;
 	timerScope.y <- y;
 	timerScope.TimerFunc <- function()
 	{
-		for (; y < PlayersCounter; y++)
+		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || NameArray[y] == null)
+			if (y == i || PlayerManager[y].player == null)
 				continue;
-			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + KillArray[y] + " kills.");
+			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
+				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].tkills + " kills.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1116,31 +1394,31 @@ function ShowShots()
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.ShotArray <- ShotArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.ShowShotsHelper <- ShowShotsHelper;
 	timerScope.TimerFunc <- function()
 	{
-		local readMarker = 0;
-		for (local i = 0; i < PlayersCounter; i++)
+		foreach (i, val in PlayerManager)
 		{
-			for (local y = 0; y < PlayersCounter; y++)
+			local readMarker = 0;
+			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || NameArray[y] == null)
+				if (y == i || _val.player == null)
 					continue;
-				else
-					readMarker++;
-				if (readMarker > 4)
+				
+				if (readMarker >= 4)
 				{
 					ShowShotsHelper(i, y);
 					break;
 				}
-				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + ShotArray[y] + " shots.");
+				if (val.player != null && _val.player != null)
+				{
+					ClientPrint(val.player, 3, _val.name + " has " + _val.tshots + " shots.");
+					readMarker++;
+				}
 			}
-			ClientPrint(PlayerArray[i], 3, "You have: " + ShotArray[i] + " shots.");
+			if (val.player != null)
+				ClientPrint(val.player, 3, "You have: " + val.tshots + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1157,20 +1435,17 @@ function ShowShotsHelper(i, y)
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.ShotArray <- ShotArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.i <- i;
 	timerScope.y <- y;
 	timerScope.TimerFunc <- function()
 	{
-		for (; y < PlayersCounter; y++)
+		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || NameArray[y] == null)
+			if (y == i || PlayerManager[y].player == null)
 				continue;
-			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + ShotArray[y] + " shots.");
+			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
+				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].tshots + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1187,31 +1462,31 @@ function ShowDeaths()
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.DeathArray <- DeathArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.ShowDeathsHelper <- ShowDeathsHelper;
 	timerScope.TimerFunc <- function()
 	{
-		local readMarker = 0;
-		for (local i = 0; i < PlayersCounter; i++)
+		foreach (i, val in PlayerManager)
 		{
-			for (local y = 0; y < PlayersCounter; y++)
+			local readMarker = 0;
+			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || NameArray[y] == null)
+				if (y == i || _val.player == null)
 					continue;
-				else
-					readMarker++;
-				if (readMarker > 4)
+				
+				if (readMarker >= 4)
 				{
 					ShowDeathsHelper(i, y);
 					break;
 				}
-				if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-					ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + DeathArray[y] + " deaths.");
+				if (val.player != null && _val.player != null)
+				{
+					ClientPrint(val.player, 3, _val.name + " has " + _val.deaths + " deaths.");
+					readMarker++;
+				}
 			}
-			ClientPrint(PlayerArray[i], 3, "You have: " + DeathArray[i] + " deaths.");
+			if (val.player != null)
+				ClientPrint(val.player, 3, "You have: " + val.deaths + " deaths.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1228,20 +1503,17 @@ function ShowDeathsHelper(i, y)
 	timer.ValidateScriptScope();
 	local timerScope = timer.GetScriptScope();
 	
-	timerScope.PlayersCounter <- PlayersCounter;
-	timerScope.PlayerArray <- PlayerArray;
-	timerScope.NameArray <- NameArray;
-	timerScope.DeathArray <- DeathArray;
+	timerScope.PlayerManager <- PlayerManager;
 	timerScope.i <- i;
 	timerScope.y <- y;
 	timerScope.TimerFunc <- function()
 	{
-		for (; y < PlayersCounter; y++)
+		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || NameArray[y] == null)
+			if (y == i || PlayerManager[y].player == null)
 				continue;
-			if (PlayerArray[y] != null && PlayerArray[y].GetPlayerName() != null)
-				ClientPrint(PlayerArray[i], 3, PlayerArray[y].GetPlayerName() + " has " + DeathArray[y] + " deaths.");
+			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
+				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].deaths + " deaths.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1250,99 +1522,269 @@ function ShowDeathsHelper(i, y)
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function SetSkin()
+function SetSkin(userid)
 {
-	local count = 0;
-	for (local i = 0; i < PlayersCounter; i++)
+	if (userid == null)
+		return;
+	
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.player == null)
+		return;
+	
+	if (cTarget.deaths < 100)
 	{
-		if (BSkin[i] && PointArray[i] >= 10000 && MarineArray[i] != null)
-		{
-			MarineArray[i].__KeyValueFromString("rendercolor", "0,0,0");
-			BSkin[i] = false;
-			count++;
-		}
+		if(!cTarget.bHasSkin)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough deaths.");
+		return;
 	}
-	ShowMessage("Done for " + count + " players.");
+	if (!cTarget.bskin)
+	{
+		if(!cTarget.bHasSkin)
+			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+		return;
+	}
+	if (cTarget.points < 100)
+	{
+		if(!cTarget.bHasSkin)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+		return;
+	}
+	if (cTarget.marine != null)
+	{
+		cTarget.marine.__KeyValueFromString("rendercolor", "0,0,0");
+		cTarget.points -= 100;
+		cTarget.bskin = false;
+		cTarget.HasSkin(true);
+		
+		if(!cTarget.bHasSkin)
+			ClientPrint(cTarget.player, 3, "Done. Your current pts: " + cTarget.points);
+	}
 }
 
-function SetMineHat()
+function SetTail(userid)
 {
-	local count = 0;
-	for (local i = 0; i < PlayersCounter; i++)
+	if (userid == null)
+		return;
+	
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.player == null)
+		return;
+
+	if (cTarget.tkills < 10000)
 	{
-		if (!BAmmo[i] && BMineHat[i] && PointArray[i] >= 20000 && MarineArray[i] != null)
-		{
-			MineArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin() + Vector(0, 0, 68), "models/items/mine/mine.mdl", 1);
-			
-			local marine = MarineArray[i];
-			EntFireByHandle(MineArray[i], "SetDefaultAnimation", "BindPose", 0, marine, marine);
-			EntFireByHandle(MineArray[i], "SetAnimation", "BindPose", 0, self, self);
-			EntFireByHandle(MineArray[i], "DisableShadow", "", 0, marine, marine);
-			EntFireByHandle(MineArray[i], "SetParent", "!activator", 0, marine, marine);
-			
-			BMineHat[i] = false;
-			count++;
-		}
+		if(!cTarget.bHasTail)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough kills.");
+		return;
 	}
-	ShowMessage("Done for " + count + " players.");
+	if (!cTarget.btail)
+	{
+		if(!cTarget.bHasTail)
+			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+		return;
+	}
+	if (cTarget.points < 100)
+	{
+		if(!cTarget.bHasTail)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+		return;
+	}
+	if (cTarget.marine != null)
+	{
+		local particle = Entities.CreateByClassname("info_particle_system");
+		particle.__KeyValueFromString("effect_name", "rocket_trail_small_glow");
+		particle.__KeyValueFromString("start_active", "1");
+		particle.SetOrigin(cTarget.marine.GetOrigin() + Vector(0, 0, 30));
+		particle.SetAnglesVector(cTarget.marine.GetAngles());
+		
+		local particle2 = Entities.CreateByClassname("info_particle_system");
+		particle2.__KeyValueFromString("effect_name", "rocket_trail_small");
+		particle2.__KeyValueFromString("start_active", "1");
+		particle2.SetOrigin(cTarget.marine.GetOrigin() + Vector(0, 0, 30));
+		particle2.SetAnglesVector(cTarget.marine.GetAngles());
+		
+		DoEntFire("!self", "SetParent", "!activator", 0, cTarget.marine, particle);
+		DoEntFire("!self", "SetParent", "!activator", 0, cTarget.marine, particle2);
+		
+		particle.Spawn();
+		particle.Activate();
+		particle2.Spawn();
+		particle2.Activate();
+		
+		cTarget.points -= 100;
+		cTarget.btail = false;
+		cTarget.HasTail(true);
+		
+		if(!cTarget.bHasTail)
+			ClientPrint(cTarget.player, 3, "Done. Your current pts: " + cTarget.points);
+	}
 }
 
-function SetTail()
+function SetMinePack(userid)
 {
-	local count = 0;
-	for (local i = 0; i < PlayersCounter; i++)
+	if (userid == null)
+		return;
+	
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.player == null)
+		return;
+
+	if (cTarget.deaths < 200)
 	{
-		if (BTail[i] && PointArray[i] >= 40000 && MarineArray[i] != null)
-		{
-			local particle = Entities.CreateByClassname("info_particle_system");
-			particle.__KeyValueFromString("effect_name", "rocket_trail_small_glow");
-			particle.__KeyValueFromString("start_active", "1");
-			particle.SetOrigin(MarineArray[i].GetOrigin() + Vector(0, 0, 30));
-			particle.SetAnglesVector(MarineArray[i].GetAngles());
-			
-			local particle2 = Entities.CreateByClassname("info_particle_system");
-			particle2.__KeyValueFromString("effect_name", "rocket_trail_small");
-			particle2.__KeyValueFromString("start_active", "1");
-			particle2.SetOrigin(MarineArray[i].GetOrigin() + Vector(0, 0, 30));
-			particle2.SetAnglesVector(MarineArray[i].GetAngles());
-			
-			DoEntFire("!self", "SetParent", "!activator", 0, MarineArray[i], particle);
-			DoEntFire("!self", "SetParent", "!activator", 0, MarineArray[i], particle2);
-			
-			particle.Spawn();
-			particle.Activate();
-			particle2.Spawn();
-			particle2.Activate();
-			
-			BTail[i] = false;
-			count++;
-		}
+		if(!cTarget.bHasMine)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough deaths.");
+		return;
 	}
-	ShowMessage("Done for " + count + " players.");
+	if (!cTarget.bammo || !cTarget.bmine)
+	{
+		if(!cTarget.bHasMine)
+			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+		return;
+	}
+	if (cTarget.points < 100)
+	{
+		if(!cTarget.bHasMine)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+		return;
+	}
+	if (cTarget.marine != null)
+	{
+		cTarget.hmine = CreateProp("prop_dynamic", cTarget.marine.GetOrigin(), "models/items/mine/mine.mdl", 1);
+		
+		EntFireByHandle(cTarget.hmine, "SetDefaultAnimation", "BindPose", 0, cTarget.marine, cTarget.marine);
+		EntFireByHandle(cTarget.hmine, "SetAnimation", "BindPose", 0, self, self);
+		EntFireByHandle(cTarget.hmine, "DisableShadow", "", 0, cTarget.marine, cTarget.marine);
+		EntFireByHandle(cTarget.hmine, "SetParent", "!activator", 0, cTarget.marine, cTarget.marine);
+		EntFireByHandle(cTarget.hmine, "SetParentAttachment", "jump_jet_r", 0, null, cTarget.marine)
+		PropLocalRotate(cTarget.hmine);
+		
+		cTarget.points -= 100;
+		cTarget.bmine = false;
+		cTarget.HasMine(true);
+		
+		if(!cTarget.bHasMine)
+			ClientPrint(cTarget.player, 3, "Done. Your current pts: " + cTarget.points);
+	}
 }
 
-function SetAmmo()
+function SetAmmo(userid)
 {
-	local count = 0;
-	for (local i = 0; i < PlayersCounter; i++)
+	if (userid == null)
+		return;
+	
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.player == null)
+		return;
+
+	if (cTarget.tshots < 10000)
 	{
-		if (!BMineHat[i] && BAmmo[i] && PointArray[i] >= 80000 && MarineArray[i] != null)
-		{
-			AmmoArray[i] = CreateProp("prop_dynamic", MarineArray[i].GetOrigin(), "models/items/ammobag/ammobag.mdl", 1);
-			
-			local marine = MarineArray[i];
-			EntFireByHandle(AmmoArray[i], "SetDefaultAnimation", "BindPose", 0, marine, marine);
-			EntFireByHandle(AmmoArray[i], "SetAnimation", "BindPose", 0, self, self);
-			EntFireByHandle(AmmoArray[i], "DisableShadow", "", 0, marine, marine);
-			EntFireByHandle(AmmoArray[i], "SetParent", "!activator", 0, marine, marine);
-			EntFireByHandle(AmmoArray[i], "SetParentAttachment", "jump_jet_r", 0, null, marine)
-			PropLocalRotate(AmmoArray[i]);
-			
-			BAmmo[i] = false;
-			count++;
-		}
+		if(!cTarget.bHasAmmo)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		return;
 	}
-	ShowMessage("Done for " + count + " players.");
+	if (!cTarget.bmine || !cTarget.bammo)
+	{
+		if(!cTarget.bHasAmmo)
+			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+		return;
+	}
+	if (cTarget.points < 100)
+	{
+		if(!cTarget.bHasAmmo)
+			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+		return;
+	}
+	if (cTarget.marine != null)
+	{
+		cTarget.hammo = CreateProp("prop_dynamic", cTarget.marine.GetOrigin(), "models/items/ammobag/ammobag.mdl", 1);
+		
+		EntFireByHandle(cTarget.hammo, "SetDefaultAnimation", "BindPose", 0, cTarget.marine, cTarget.marine);
+		EntFireByHandle(cTarget.hammo, "SetAnimation", "BindPose", 0, self, self);
+		EntFireByHandle(cTarget.hammo, "DisableShadow", "", 0, cTarget.marine, cTarget.marine);
+		EntFireByHandle(cTarget.hammo, "SetParent", "!activator", 0, cTarget.marine, cTarget.marine);
+		EntFireByHandle(cTarget.hammo, "SetParentAttachment", "jump_jet_r", 0, null, cTarget.marine);
+		PropLocalRotate(cTarget.hammo);
+		
+		cTarget.points -= 100;
+		cTarget.bammo = false;
+		cTarget.HasAmmo(true);
+			
+		if(!cTarget.bHasAmmo)
+			ClientPrint(cTarget.player, 3, "Done. Your current pts: " + cTarget.points);
+	}
+}
+
+function SetFlare(userid)
+{
+	if (userid == null)
+		return;
+	
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.marine == null || cTarget.player == null)
+		return;
+	
+	if(cTarget.tshots < 20000)
+	{
+		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		return;
+	}
+	if(!cTarget.bflare)
+	{
+		ClientPrint(cTarget.player, 3, "Failed. You've used this gift.");
+		return;
+	}
+	if(cTarget.points < 100)
+	{
+		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		return;
+	}
+	cTarget.marine.DropWeapon(2);
+	cTarget.marine.GiveWeapon("asw_weapon_flares", 2);
+	cTarget.points -= 100;
+	cTarget.bflare = false;
+	ClientPrint(cTarget.player, 3, "Done. Your current pts: " + cTarget.points);
+}
+
+function SetScale(userid, ScaleMode) //1 to small, 2 to big
+{
+	if (userid == null)
+		return;
+	
+	local cTarget = PlayerManager[GetPlayerIndex(GetPlayerFromUserID(userid))];
+	if (cTarget.marine == null || cTarget.player == null)
+		return;
+	
+	if(cTarget.tkills < 20000)
+	{
+		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		return;
+	}
+	if(!cTarget.bscale)
+	{
+		ClientPrint(cTarget.player, 3, "Failed. You've used this gift.");
+		return;
+	}
+	if(cTarget.points < 100)
+	{
+		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		return;
+	}
+	if (ScaleMode == 1)
+	{
+		cTarget.HasScale(1);
+		DoEntFire("!self", "AddOutput", "modelscale 0.5", 0, null, cTarget.marine);
+	}
+		
+	else if (ScaleMode == 2)
+	{
+		cTarget.HasScale(2);
+		DoEntFire("!self", "AddOutput", "modelscale 1.5", 0, null, cTarget.marine);
+	}
+		
+	cTarget.points -= 100;
+	cTarget.bscale = false;
+		
+	if(cTarget.bHasScale != 0)
+		ClientPrint(cTarget.player, 3, "Done. Your current pts: " + cTarget.points);
 }
 
 function PropLocalRotate(prop)
@@ -1365,17 +1807,31 @@ function PropLocalRotate(prop)
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function ParticlePrecache(effect)
+function PrecacheParticlesFunc()
 {
-	local particle = Entities.CreateByClassname("info_particle_system");
-	particle.__KeyValueFromString("effect_name", effect);
-	particle.__KeyValueFromString("start_active", "1");
-	particle.SetOrigin(Vector(16384, 16384, 16384));
-	particle.Spawn();
-	particle.Activate();
-	DoEntFire("!self", "Kill", "", 0, null, particle);
+	local strArrayParticleName = ["rocket_trail_small_glow", "rocket_trail_small"];
+	local vecPosition = Vector(16384, 16384, 16384);
+	
+	foreach(val in strArrayParticleName)
+		CreateParticleFunc(0.5, vecPosition, Vector(0, 0, 0), val, null);
 }
 
-ParticlePrecache("rocket_trail_small_glow");
-ParticlePrecache("rocket_trail_small");
+function CreateParticleFunc(arg_flAliveTime, arg_vecOrigin, arg_vecAngles, arg_strParticleClass, arg_hParent)
+{
+	local hParticle = Entities.CreateByClassname("info_particle_system");
+	hParticle.__KeyValueFromString("effect_name", arg_strParticleClass);
+	hParticle.__KeyValueFromString("start_active", "1");
+	hParticle.SetOrigin(arg_vecOrigin);
+	hParticle.SetAnglesVector(arg_vecAngles);
+	hParticle.Spawn();
+	hParticle.Activate();
+	DoEntFire("!self", "Kill", "", arg_flAliveTime, null, hParticle);
+	
+	if (arg_hParent != null)
+		DoEntFire("!self", "SetParent", "!activator", 0, arg_hParent, hParticle);
+	
+	return hParticle;
+}
+
+PrecacheParticlesFunc();
 g_ModeScript.OnTakeDamage_Alive_Any <- OnTakeDamage_Alive_Any;
