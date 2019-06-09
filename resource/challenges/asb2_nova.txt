@@ -1,7 +1,7 @@
 "CHALLENGE"
 {
-	"name"	"ASB2 - PRO Edtion"
-	"description"	"Easy and Normal are not allowed."
+	"name"	"ASB2 - Nova Edition (uncompleted)"
+	"description"	"Easy and Normal are not allowed.Prespawn x1."
 
 	"convars"
 	{

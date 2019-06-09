@@ -12,6 +12,7 @@ Convars.SetValue("asw_wanderer_override", 1);
 Convars.SetValue("asw_difficulty_alien_health_step", 0.2);
 Convars.SetValue("asw_difficulty_alien_damage_step", 0.2);
 Convars.SetValue("asw_marine_time_until_ignite", 0);
+Convars.SetValue("asw_stim_time_scale", 1);
 Convars.SetValue("rd_marine_ignite_immediately", 1);
 Convars.SetValue("asw_marine_burn_time_easy", 60);
 Convars.SetValue("asw_marine_burn_time_normal", 60);
@@ -26,15 +27,15 @@ const MessageShowDelay = 1.0;
 const thirdUpdateRunDelay = 0.5;
 const UpdateBaseDelay = 2.0;
 const StopFunc = 5000;
-PlayerCounter <- 0;
 
 firstUpdateRun <- true;
 secondaryUpdateRun <- true;
 thirdUpdateRun <- true;
 forthUpdateRun <- true;
-FlamerDetected <- false;
+bFlamerDetected <- false;
+bTeslaDetected <- false;
 b3Checks <- true;
-bInPRO <- false;
+bHellion <- false;
 
 n_AutoGavy <- null;
 
@@ -43,24 +44,6 @@ timer_UpperBound <- 4.0;
 victimSpeedBoosted <- 1.6;
 
 PlayerManager <- [];
-alienNamesArray <- [
-"asw_drone",
-"asw_buzzer",
-"asw_parasite",
-"asw_shieldbug",
-"asw_grub",
-"asw_drone_jumper",
-"asw_harvester",
-"asw_parasite_defanged",
-"asw_queen",
-"asw_boomer",
-"asw_ranger",
-"asw_mortarbug",
-"asw_shaman",
-"asw_drone_uber",
-"npc_antlionguard_normal",
-"npc_antlionguard_cavern"
-];
 
 class cPlayer
 {
@@ -355,11 +338,6 @@ function OnGameEvent_entity_killed(params)
 				if (h_inflictor != null && h_inflictor.GetClassname() == "asw_grenade_cluster")
 					SetPoints(attackerIndex, 30, 0);
 			}
-			else if (victimIndex == n_AutoGavy)
-			{
-				DisplayMsg(PlayerManager[attackerIndex].name + " Extremly Evil !!!111");
-				SetPoints(attackerIndex, 100, 0);
-			}
 			else
 			{
 				if (PlayerManager[attackerIndex].player != null && PlayerManager[attackerIndex].player != null)
@@ -455,21 +433,27 @@ function OnGameEvent_player_say(params)
 			DisplayMsg("Current Map: " + GetMapName());
 			return;
 		case "&status":
+			ReloadPlayers();
 			ReportStatus();
 			return;
 		case "&cancel":
+			ReloadPlayers();
 			CancelGifts(speakerID);
 			return;
 		case "&pts":
+			ReloadPlayers();
 			ShowAllPointsLate();
 			return;
 		case "&kill":
+			ReloadPlayers();
 			ShowKills();
 			return;
 		case "&shot":
+			ReloadPlayers();
 			ShowShots();
 			return;
 		case "&death":
+			ReloadPlayers();
 			ShowDeaths();
 			return;
 	}
@@ -480,39 +464,36 @@ function OnGameEvent_player_say(params)
 			switch (strCmd)
 			{
 				case "skin":
+					ReloadPlayers();
 					SetSkin(speakerID);
 					break;
 				case "mine":
+					ReloadPlayers();
 					SetMinePack(speakerID);
 					break;
 				case "tail":
+					ReloadPlayers();
 					SetTail(speakerID);
 					break;
 				case "ammo":
+					ReloadPlayers();
 					SetAmmo(speakerID);
 					break;
 				case "flare":
+					ReloadPlayers();
 					SetFlare(speakerID);
 					break;
 				case "small":
+					ReloadPlayers();
 					SetScale(speakerID, 1);
 					break;
 				case "big":
+					ReloadPlayers();
 					SetScale(speakerID, 2);
 					break;
 			}
 		}
 	}
-}
-
-function IfAlienFunc(testingEntity)
-{
-	for (local i = 0; i < alienNamesArray.len(); i++)
-	{
-		if (testingEntity.GetClassname() == alienNamesArray[i])
-			return true;
-	}
-	return false;
 }
 
 function TimerFunc()
@@ -546,40 +527,43 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 		}
 	}
 	
-	if (FlamerDetected)
+	if (bFlamerDetected || bTeslaDetected)
 	{
-		if (inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile" && h_victim != null && IfAlienFunc(h_victim))
+		if (h_victim != null && h_victim.IsAlien())
 		{
-			if (h_victim in g_worldspawnScope.MainTimersTable)
+			if (inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
 			{
-				DoEntFire("!self", "ResetTimer", "", 0, null, g_worldspawnScope.MainTimersTable[h_victim]);
-			}
-			else
-			{
-				DoEntFire("!self", "AddOutput", "speedscale " + victimSpeedBoosted.tostring(), 0, null, h_victim);
-				
-				local timer = Entities.CreateByClassname("logic_timer");
+				if (h_victim in g_worldspawnScope.MainTimersTable)
+				{
+					DoEntFire("!self", "ResetTimer", "", 0, null, g_worldspawnScope.MainTimersTable[h_victim]);
+				}
+				else
+				{
+					DoEntFire("!self", "AddOutput", "speedscale " + victimSpeedBoosted.tostring(), 0, null, h_victim);
+					
+					local timer = Entities.CreateByClassname("logic_timer");
 
-				timer.__KeyValueFromInt("UseRandomTime", 1);
-				timer.__KeyValueFromFloat("LowerRandomBound", timer_LowerBound);
-				timer.__KeyValueFromFloat("UpperRandomBound", timer_UpperBound);
-				DoEntFire("!self", "Disable", "", 0, null, timer);
-				
-				timer.ValidateScriptScope();
-				local timerScope = timer.GetScriptScope();
-				timerScope.h_victim <- h_victim;
-				timerScope.TimerFunc <- TimerFunc;
-				timer.ConnectOutput("OnTimer", "TimerFunc");
-				DoEntFire("!self", "Enable", "", 0, null, timer);
-				
-				g_worldspawnScope.MainTimersTable[h_victim] <- timer;
-				
-				h_victim.ValidateScriptScope();
-				local victimScope = h_victim.GetScriptScope();
-				victimScope.VictimDeathFunc <- VictimDeathFunc;
-				victimScope.timer <- timer;
-				victimScope.g_worldspawnScope <- g_worldspawnScope;
-				h_victim.ConnectOutput("OnDeath", "VictimDeathFunc");
+					timer.__KeyValueFromInt("UseRandomTime", 1);
+					timer.__KeyValueFromFloat("LowerRandomBound", timer_LowerBound);
+					timer.__KeyValueFromFloat("UpperRandomBound", timer_UpperBound);
+					DoEntFire("!self", "Disable", "", 0, null, timer);
+					
+					timer.ValidateScriptScope();
+					local timerScope = timer.GetScriptScope();
+					timerScope.h_victim <- h_victim;
+					timerScope.TimerFunc <- TimerFunc;
+					timer.ConnectOutput("OnTimer", "TimerFunc");
+					DoEntFire("!self", "Enable", "", 0, null, timer);
+					
+					g_worldspawnScope.MainTimersTable[h_victim] <- timer;
+					
+					h_victim.ValidateScriptScope();
+					local victimScope = h_victim.GetScriptScope();
+					victimScope.VictimDeathFunc <- VictimDeathFunc;
+					victimScope.timer <- timer;
+					victimScope.g_worldspawnScope <- g_worldspawnScope;
+					h_victim.ConnectOutput("OnDeath", "VictimDeathFunc");
+				}
 			}
 		}
 	}
@@ -590,7 +574,7 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 		if (h_attacker.IsInhabited())
 			attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
 		
-		if (bInPRO && !FlamerDetected && inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
+		if (!bFlamerDetected && inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
 		{
 			if (weapon != null && weapon.GetClassname() == "asw_weapon_flamer")
 			{
@@ -600,8 +584,8 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 					FlamerUserName =PlayerManager[attackerIndex].name;
 					
 				DisplayMsg("Flamethrower Detected! The First User: " + FlamerUserName + ".", 0);
-				DisplayMsg("OnFire Settings Enabled.");
-				FlamerDetected = true;
+				DisplayMsg("Speedy Drone Settings Enabled.");
+				bFlamerDetected = true;
 			}
 		}
 		
@@ -678,7 +662,7 @@ function CheckDifficulty()
 
 function ASB2SetUp()
 {
-	if (!bInPRO)
+	if (!bHellion)
 		return;
 	
 	local hButton = null;
@@ -779,12 +763,7 @@ function ReadPlayers()
 {
 	local player = null;
 	while ((player = Entities.FindByClassname(player, "player")) != null)
-	{
-		if (player.GetNetworkIDString() == "STEAM_1:0:176990841") //AutoGavy
-			n_AutoGavy = PlayerCounter;
 		PlayerManager.push(cPlayer(player));
-		PlayerCounter++;
-	}
 }
 
 //Data File: Points, Kills, Shots, Deaths, Version, HasSkin, HasTail, HasMine, HasAmmo, HasScale
@@ -952,10 +931,10 @@ function GetPlayerIndex(player)
 		}
 	}
 	ReloadPlayers();
-	return fGetPlayerIndex(player);
+	return _GetPlayerIndex(player);
 }
 
-function fGetPlayerIndex(player)
+function _GetPlayerIndex(player)
 {
 	local strID = player.GetNetworkIDString();
 	foreach (index, val in PlayerManager)
@@ -966,7 +945,7 @@ function fGetPlayerIndex(player)
 			return index;
 		}
 	}
-	return _GetPlayerIndex(player);
+	return null;
 }
 
 function Greeting()
