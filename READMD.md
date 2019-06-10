@@ -19,7 +19,7 @@ Changes from regular ASBI:
 - Easy and Normal Difficulty are not allowed
 - Remove map's weapon requirement
 - Enable camera rotation
-- Remove slowmotion
+- Disabled slowmotion
 - Enables OnFire Settings when there's a player/bot using flamerthrower
 - Points Gifts: Black Skin, Rocket Tail, Flame Mine Backpack, Ammo Backpack, Free Flares and Marine Scale.
 *Each gift only can be used once in each round, and costs 100 points for using.
@@ -30,7 +30,7 @@ ASB2 - Hellion Edition
 - Enabled two sided hordes
 - Harder wire hacks
 - Reduced Buzzer's attack interval
-- All buttons and computers require a hack, new-added hacking do not require a tech marine.
+- All buttons and computers require a hack, new-added button hacks do not require a tech marine, but computers require.
 - Alien Spawns when hacking
 
 ASB2 - Nova Edition (uncompleted)

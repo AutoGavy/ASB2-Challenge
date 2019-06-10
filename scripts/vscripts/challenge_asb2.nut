@@ -226,6 +226,38 @@ else if (Convars.GetFloat("asw_skill") == 5) //brutal
 	Convars.SetValue("sk_antlionguard_health", 1000);
 }
 
+function OnMissionStart()
+{
+	local gs_timer = Entities.CreateByClassname("logic_timer");
+	gs_timer.__KeyValueFromFloat("RefireTime", 0.01);
+	DoEntFire("!self", "Disable", "", 0, null, gs_timer);
+	gs_timer.ValidateScriptScope();
+	local gs_timerScope = gs_timer.GetScriptScope();
+	
+	gs_timerScope.TimerFunc <- function()
+	{
+		if (Convars.GetFloat("asw_skill") == 5)
+		{
+			Convars.SetValue("asw_difficulty_alien_health_step", 0);
+			Convars.SetValue("asw_drone_health", 88);
+			Convars.SetValue("asw_ranger_health", 222);
+			Convars.SetValue("asw_drone_uber_health", 1300);
+			Convars.SetValue("asw_shaman_health", 129);
+			Convars.SetValue("rd_harvester_health", 440);
+			Convars.SetValue("rd_mortarbug_health", 770);
+			Convars.SetValue("rd_parasite_health", 55);
+			Convars.SetValue("rd_parasite_defanged_health", 22);
+			Convars.SetValue("rd_shieldbug_health", 2200);
+			Convars.SetValue("sk_asw_buzzer_health", 66);
+			Convars.SetValue("sk_antlionguard_health", 1000);
+		}
+		self.DisconnectOutput("OnTimer", "TimerFunc");
+		self.Destroy();
+	}
+	gs_timer.ConnectOutput("OnTimer", "TimerFunc");
+	DoEntFire("!self", "Enable", "", 0, null, gs_timer);
+}
+
 function Update()
 {
 	if (b3Checks)
@@ -266,26 +298,26 @@ function Update()
 
 function OnGameEvent_entity_killed(params)
 {
-	local h_victim = null;
-	local h_attacker = null;
-	local h_inflictor = null;
+	local hVictim = null;
+	local hAttacker = null;
+	local hInflictor = null;
 	
 	if ("entindex_killed" in params)
-		h_victim = EntIndexToHScript(params["entindex_killed"]);
+		hVictim = EntIndexToHScript(params["entindex_killed"]);
 	if ("entindex_attacker" in params)
-		h_attacker = EntIndexToHScript(params["entindex_attacker"]);
+		hAttacker = EntIndexToHScript(params["entindex_attacker"]);
 	if ("entindex_inflictor" in params)
-		h_inflictor = EntIndexToHScript(params["entindex_inflictor"]);
+		hInflictor = EntIndexToHScript(params["entindex_inflictor"]);
 	
-	if (!h_victim)
+	if (!hVictim)
 		return;
 
 	local victimIndex = null;
 	local attackerIndex = null;
-	if (h_victim.GetClassname() == "asw_marine")
+	if (hVictim.GetClassname() == "asw_marine")
 	{
-		if (h_victim.IsInhabited())
-			victimIndex = GetPlayerIndex(h_victim.GetCommander());
+		if (hVictim.IsInhabited())
+			victimIndex = GetPlayerIndex(hVictim.GetCommander());
 		
 		if (victimIndex != null)
 		{
@@ -296,7 +328,7 @@ function OnGameEvent_entity_killed(params)
 		
 		if (victimIndex != null && !PlayerManager[victimIndex].bmine)
 		{
-			PlantIncendiaryMine(h_victim.GetOrigin(), h_victim.GetAngles());
+			PlantIncendiaryMine(hVictim.GetOrigin(), hVictim.GetAngles());
 			PlayerManager[victimIndex].hmine.Destroy();
 		}
 		
@@ -309,9 +341,9 @@ function OnGameEvent_entity_killed(params)
 			PlayerManager[victimIndex].hammo.Destroy();
 		}
 		
-		if (victimIndex != null && h_inflictor != null  && PlayerManager[victimIndex].player != null)
+		if (victimIndex != null && hInflictor != null  && PlayerManager[victimIndex].player != null)
 		{
-			if (h_inflictor.GetClassname() == "asw_burning")
+			if (hInflictor.GetClassname() == "asw_burning")
 			{
 				if (PlayerManager[victimIndex].player != null)
 					DisplayMsg(PlayerManager[victimIndex].name + " was burned alive.");
@@ -322,20 +354,20 @@ function OnGameEvent_entity_killed(params)
 			}
 		}
 		
-		if (!h_attacker)
+		if (!hAttacker)
 			return;
 
-		if (h_attacker.GetClassname() == "asw_marine")
+		if (hAttacker.GetClassname() == "asw_marine")
 		{
-			if (h_attacker.IsInhabited())
-				attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
+			if (hAttacker.IsInhabited())
+				attackerIndex = GetPlayerIndex(hAttacker.GetCommander());
 			
 			if (attackerIndex == null)
 				DisplayMsg("Evil Robot!");
 			else if (victimIndex == attackerIndex)
 			{
 				DisplayMsg("Console: o", 0.06);
-				if (h_inflictor != null && h_inflictor.GetClassname() == "asw_grenade_cluster")
+				if (hInflictor != null && hInflictor.GetClassname() == "asw_grenade_cluster")
 					SetPoints(attackerIndex, 30, 0);
 			}
 			else
@@ -348,16 +380,16 @@ function OnGameEvent_entity_killed(params)
 		}
 		else if (victimIndex == null || PlayerManager[victimIndex].player == null)
 			return;
-		else if (h_attacker.IsAlien())
+		else if (hAttacker.IsAlien())
 		{
 			if (PlayerManager[victimIndex].player != null)
-				DisplayMsg(PlayerManager[victimIndex].name + GetAlienName(h_attacker.GetClassname()));
+				DisplayMsg(PlayerManager[victimIndex].name + GetAlienName(hAttacker.GetClassname()));
 			else
-				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + GetAlienName(h_attacker.GetClassname()));
+				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + GetAlienName(hAttacker.GetClassname()));
 		}
-		else if (h_attacker.GetClassname() == "asw_trigger_fall")
+		else if (hAttacker.GetClassname() == "asw_trigger_fall")
 		{
-			if (h_victim.IsInhabited())
+			if (hVictim.IsInhabited())
 			{
 				if (PlayerManager[victimIndex].player != null)
 				{
@@ -372,7 +404,7 @@ function OnGameEvent_entity_killed(params)
 			else
 				DisplayMsg(PlayerManager[victimIndex].marine.GetMarineName() + " has fallen to his demise.");
 		}
-		else if (h_attacker.GetClassname() == "env_fire")
+		else if (hAttacker.GetClassname() == "env_fire")
 		{
 			if (PlayerManager[victimIndex].player != null)
 				DisplayMsg(PlayerManager[victimIndex].name + " was burned alive.");
@@ -384,12 +416,12 @@ function OnGameEvent_entity_killed(params)
 		return;
 	}
 	
-	if (h_attacker != null && h_attacker.GetClassname() == "asw_marine" && h_victim.IsAlien())
+	if (hAttacker != null && hAttacker.GetClassname() == "asw_marine" && hVictim.IsAlien())
 	{
-		if (h_attacker.IsInhabited())
+		if (hAttacker.IsInhabited())
 		{
-			attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
-			SetPoints(attackerIndex, ReckonPoints(h_victim.GetClassname()), 1);
+			attackerIndex = GetPlayerIndex(hAttacker.GetCommander());
+			SetPoints(attackerIndex, ReckonPoints(hVictim.GetClassname()), 1);
 			PlayerManager[attackerIndex].tkills++;
 			PlayerManager[attackerIndex].kills++;
 		}
@@ -426,7 +458,7 @@ function OnGameEvent_player_say(params)
 			DisplayMsg("&flare - Get a flare which can illuminate or burn biomass. 20000 shots required.\nPage 3/4     Type &help4 to see next page.");
 			return;
 		case "&help4":
-			DisplayMsg("&small / &big - Scale your marine size. 20000 kills required.\n&status  -  Report current players' status.");
+			DisplayMsg("&shrink / &enlarge - Scale your marine size. 20000 kills required.\n&status  -  Report current players' status.");
 			DisplayMsg("~Have Fun!\nPage 4/4     Type &help3 to see previous page.");
 			return;
 		case "&map":
@@ -483,11 +515,11 @@ function OnGameEvent_player_say(params)
 					ReloadPlayers();
 					SetFlare(speakerID);
 					break;
-				case "small":
+				case "shrink":
 					ReloadPlayers();
 					SetScale(speakerID, 1);
 					break;
-				case "big":
+				case "enlarge":
 					ReloadPlayers();
 					SetScale(speakerID, 2);
 					break;
@@ -510,36 +542,36 @@ function VictimDeathFunc()
 	delete g_worldspawnScope.MainTimersTable[self];
 }
 
-function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage, damageType, ammoName) 
+function OnTakeDamage_Alive_Any(hVictim, inflictor, hAttacker, weapon, damage, damageType, ammoName) 
 {
-	if (h_attacker != null && h_attacker.IsAlien())
+	if (hAttacker != null && hAttacker.IsAlien())
 	{
-		if (h_victim != null && h_victim.GetClassname() == "asw_marine")
+		if (hVictim != null && hVictim.GetClassname() == "asw_marine")
 		{
 			local victimIndex = null;
-			if (h_victim.IsInhabited())
-				victimIndex = GetPlayerIndex(h_victim.GetCommander());
+			if (hVictim.IsInhabited())
+				victimIndex = GetPlayerIndex(hVictim.GetCommander());
 			
 			if (victimIndex == null)
 				return damage;
 			
-			SetPoints(victimIndex, ReckonPoints(h_attacker.GetClassname()), 0);
+			SetPoints(victimIndex, ReckonPoints(hAttacker.GetClassname()), 0);
 		}
 	}
 	
 	if (bFlamerDetected || bTeslaDetected)
 	{
-		if (h_victim != null && h_victim.IsAlien())
+		if (hVictim != null && hVictim.IsAlien())
 		{
 			if (inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
 			{
-				if (h_victim in g_worldspawnScope.MainTimersTable)
+				if (hVictim in g_worldspawnScope.MainTimersTable)
 				{
-					DoEntFire("!self", "ResetTimer", "", 0, null, g_worldspawnScope.MainTimersTable[h_victim]);
+					DoEntFire("!self", "ResetTimer", "", 0, null, g_worldspawnScope.MainTimersTable[hVictim]);
 				}
 				else
 				{
-					DoEntFire("!self", "AddOutput", "speedscale " + victimSpeedBoosted.tostring(), 0, null, h_victim);
+					DoEntFire("!self", "AddOutput", "speedscale " + victimSpeedBoosted.tostring(), 0, null, hVictim);
 					
 					local timer = Entities.CreateByClassname("logic_timer");
 
@@ -550,29 +582,29 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 					
 					timer.ValidateScriptScope();
 					local timerScope = timer.GetScriptScope();
-					timerScope.h_victim <- h_victim;
+					timerScope.hVictim <- hVictim;
 					timerScope.TimerFunc <- TimerFunc;
 					timer.ConnectOutput("OnTimer", "TimerFunc");
 					DoEntFire("!self", "Enable", "", 0, null, timer);
 					
-					g_worldspawnScope.MainTimersTable[h_victim] <- timer;
+					g_worldspawnScope.MainTimersTable[hVictim] <- timer;
 					
-					h_victim.ValidateScriptScope();
-					local victimScope = h_victim.GetScriptScope();
+					hVictim.ValidateScriptScope();
+					local victimScope = hVictim.GetScriptScope();
 					victimScope.VictimDeathFunc <- VictimDeathFunc;
 					victimScope.timer <- timer;
 					victimScope.g_worldspawnScope <- g_worldspawnScope;
-					h_victim.ConnectOutput("OnDeath", "VictimDeathFunc");
+					hVictim.ConnectOutput("OnDeath", "VictimDeathFunc");
 				}
 			}
 		}
 	}
 	
-	if (h_attacker != null && h_attacker.GetClassname() == "asw_marine")
+	if (hAttacker != null && hAttacker.GetClassname() == "asw_marine")
 	{
 		local attackerIndex = null;
-		if (h_attacker.IsInhabited())
-			attackerIndex = GetPlayerIndex(h_attacker.GetCommander());
+		if (hAttacker.IsInhabited())
+			attackerIndex = GetPlayerIndex(hAttacker.GetCommander());
 		
 		if (!bFlamerDetected && inflictor != null && inflictor.GetClassname() == "asw_flamer_projectile")
 		{
@@ -589,12 +621,12 @@ function OnTakeDamage_Alive_Any(h_victim, inflictor, h_attacker, weapon, damage,
 			}
 		}
 		
-		if (h_victim != null && h_victim.GetClassname() == "asw_marine")
+		if (hVictim != null && hVictim.GetClassname() == "asw_marine")
 		{
 			if (attackerIndex != null)
 				return damage;
 			
-			if (h_victim.GetMarineName() != h_attacker.GetMarineName())
+			if (hVictim.GetMarineName() != hAttacker.GetMarineName())
 				SetPoints(attackerIndex, damage.tointeger(), 0);
 		}
 	}
@@ -610,23 +642,23 @@ function OnGameEvent_player_heal(params)
 
 function OnGameEvent_weapon_fire(params)
 {
-	local marine = null;
-	local weapon = null;
+	local hMarine = null;
+	local hWeapon = null;
 	
 	if ("marine" in params)
-		marine = EntIndexToHScript(params["marine"]);
+		hMarine = EntIndexToHScript(params["marine"]);
 	if ("weapon" in params)
-		weapon = EntIndexToHScript(params["weapon"]);
+		hWeapon = EntIndexToHScript(params["weapon"]);
 
-	if (!marine.IsInhabited() || !marine || !weapon)
+	if (!hMarine.IsInhabited() || !hMarine || !hWeapon)
 		return;
-	else if (weapon.GetClassname() == "asw_weapon_heal_gun" || weapon.GetClassname() == "asw_weapon_heal_grenade" || weapon.GetClassname() == "asw_weapon_medical_satchel" || weapon.GetClassname() == "asw_weapon_ammo_bag" || weapon.GetClassname() == "asw_weapon_ammo_satchel" || weapon.GetClassname() == "asw_weapon_chainsaw" || weapon.GetClassname() == "asw_weapon_mining_laser" || weapon.GetClassname() == "asw_weapon_sentry" || weapon.GetClassname() == "asw_weapon_sentry_flamer" || weapon.GetClassname() == "asw_weapon_sentry_freeze" || weapon.GetClassname() == "asw_weapon_sentry_cannon")
+	else if (hWeapon.GetClassname() == "asw_weapon_heal_gun" || hWeapon.GetClassname() == "asw_weapon_heal_grenade" || hWeapon.GetClassname() == "asw_weapon_medical_satchel" || hWeapon.GetClassname() == "asw_weapon_ammo_bag" || hWeapon.GetClassname() == "asw_weapon_ammo_satchel" || hWeapon.GetClassname() == "asw_weapon_chainsaw" || hWeapon.GetClassname() == "asw_weapon_mining_laser" || hWeapon.GetClassname() == "asw_weapon_sentry" || hWeapon.GetClassname() == "asw_weapon_sentry_flamer" || hWeapon.GetClassname() == "asw_weapon_sentry_freeze" || hWeapon.GetClassname() == "asw_weapon_sentry_cannon")
 		return;
-	else if (weapon.GetClassname() == "asw_weapon_tesla_gun")
-		SetPoints(GetPlayerIndex(marine.GetCommander()), 1, 1);
+	else if (hWeapon.GetClassname() == "asw_weapon_tesla_gun")
+		SetPoints(GetPlayerIndex(hMarine.GetCommander()), 1, 1);
 	
-	PlayerManager[GetPlayerIndex(marine.GetCommander())].tshots++;
-	PlayerManager[GetPlayerIndex(marine.GetCommander())].shots++;
+	PlayerManager[GetPlayerIndex(hMarine.GetCommander())].tshots++;
+	PlayerManager[GetPlayerIndex(hMarine.GetCommander())].shots++;
 	return;
 }
 
@@ -665,9 +697,15 @@ function ASB2SetUp()
 	if (!bHellion)
 		return;
 	
+	local hPanel = null;
 	local hButton = null;
 	local hComputer = null;
 	local hDoor = null;
+	while ((hPanel = Entities.FindByClassname(hPanel, "prop_dynamic")) != null)
+	{
+		if (hPanel.GetModelName() == "models/props/techdeco/buttonpanel/panel02.mdl" && hPanel.GetKeyValue("skin").tointeger() == 2)
+			hPanel.__KeyValueFromInt("skin", 1);
+	}
 	while ((hButton = Entities.FindByClassname(hButton, "trigger_asw_button_area")) != null)
 	{
 		if (hButton.GetKeyValue("locked").tointeger() == 0)
@@ -679,7 +717,6 @@ function ASB2SetUp()
 			hButton.ValidateScriptScope();
 			local buttonScope = hButton.GetScriptScope();
 
-			buttonScope.hButton <- hButton;
 			buttonScope.SpawnUberFunc <- function()
 			{
 				Director.SpawnAlienAuto("asw_mortarbug");
@@ -713,7 +750,6 @@ function ASB2SetUp()
 			hComputer.ValidateScriptScope();
 			local computerScope = hComputer.GetScriptScope();
  
-			computerScope.hComputer <- hComputer;
 			computerScope.SpawnUberFunc <- function()
 			{
 				Director.SpawnAlienAuto("asw_mortarbug");
@@ -747,10 +783,9 @@ function ASB2SetUp()
 			hDoor.ValidateScriptScope();
 			local doorScope = hDoor.GetScriptScope();
 			
-			doorScope.hDoor <- hDoor;
 			doorScope.AdjustAutoOpenFunc <- function()
 			{
-				hDoor.__KeyValueFromInt("autoopen", 1);
+				self.__KeyValueFromInt("autoopen", 1);
 				self.DisconnectOutput("OnFullyOpen", "AdjustAutoOpenFunc");
 			}
 			
@@ -1513,19 +1548,19 @@ function SetSkin(userid)
 	if (cTarget.deaths < 100)
 	{
 		if(!cTarget.bHasSkin)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough deaths.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient deaths.");
 		return;
 	}
 	if (!cTarget.bskin)
 	{
 		if(!cTarget.bHasSkin)
-			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+			ClientPrint(cTarget.player, 3, "Failed. You've received this gift already.");
 		return;
 	}
 	if (cTarget.points < 100)
 	{
 		if(!cTarget.bHasSkin)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient points.");
 		return;
 	}
 	if (cTarget.marine != null)
@@ -1552,19 +1587,19 @@ function SetTail(userid)
 	if (cTarget.tkills < 10000)
 	{
 		if(!cTarget.bHasTail)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough kills.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient kills.");
 		return;
 	}
 	if (!cTarget.btail)
 	{
 		if(!cTarget.bHasTail)
-			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+			ClientPrint(cTarget.player, 3, "Failed. You've received this gift already.");
 		return;
 	}
 	if (cTarget.points < 100)
 	{
 		if(!cTarget.bHasTail)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient points.");
 		return;
 	}
 	if (cTarget.marine != null)
@@ -1610,19 +1645,19 @@ function SetMinePack(userid)
 	if (cTarget.deaths < 200)
 	{
 		if(!cTarget.bHasMine)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough deaths.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient deaths.");
 		return;
 	}
 	if (!cTarget.bammo || !cTarget.bmine)
 	{
 		if(!cTarget.bHasMine)
-			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+			ClientPrint(cTarget.player, 3, "Failed. You've received this gift already.");
 		return;
 	}
 	if (cTarget.points < 100)
 	{
 		if(!cTarget.bHasMine)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient points.");
 		return;
 	}
 	if (cTarget.marine != null)
@@ -1657,19 +1692,19 @@ function SetAmmo(userid)
 	if (cTarget.tshots < 10000)
 	{
 		if(!cTarget.bHasAmmo)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient shots.");
 		return;
 	}
 	if (!cTarget.bmine || !cTarget.bammo)
 	{
 		if(!cTarget.bHasAmmo)
-			ClientPrint(cTarget.player, 3, "Failed. You've already had a effect with the same type of this gift.");
+			ClientPrint(cTarget.player, 3, "Failed. You've received this gift already.");
 		return;
 	}
 	if (cTarget.points < 100)
 	{
 		if(!cTarget.bHasAmmo)
-			ClientPrint(cTarget.player, 3, "Failed. You don't have enough points.");
+			ClientPrint(cTarget.player, 3, "Failed. Insufficient points.");
 		return;
 	}
 	if (cTarget.marine != null)
@@ -1703,7 +1738,7 @@ function SetFlare(userid)
 	
 	if(cTarget.tshots < 20000)
 	{
-		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		ClientPrint(cTarget.player, 3, "Failed. Insufficient shots.");
 		return;
 	}
 	if(!cTarget.bflare)
@@ -1713,7 +1748,7 @@ function SetFlare(userid)
 	}
 	if(cTarget.points < 100)
 	{
-		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		ClientPrint(cTarget.player, 3, "Failed. Insufficient shots.");
 		return;
 	}
 	cTarget.marine.DropWeapon(2);
@@ -1734,7 +1769,7 @@ function SetScale(userid, ScaleMode) //1 to small, 2 to big
 	
 	if(cTarget.tkills < 20000)
 	{
-		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		ClientPrint(cTarget.player, 3, "Failed. Insufficient shots.");
 		return;
 	}
 	if(!cTarget.bscale)
@@ -1744,7 +1779,7 @@ function SetScale(userid, ScaleMode) //1 to small, 2 to big
 	}
 	if(cTarget.points < 100)
 	{
-		ClientPrint(cTarget.player, 3, "Failed. You don't have enough shots.");
+		ClientPrint(cTarget.player, 3, "Failed. Insufficient shots.");
 		return;
 	}
 	if (ScaleMode == 1)
