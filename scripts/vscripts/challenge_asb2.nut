@@ -36,6 +36,7 @@ bFlamerDetected <- false;
 bTeslaDetected <- false;
 b3Checks <- true;
 bHellion <- false;
+bCarnage <- false;
 
 n_AutoGavy <- null;
 
@@ -60,9 +61,9 @@ class cPlayer
 			name = vplayer.GetPlayerName();
 			id = vplayer.GetNetworkIDString();
 			
-			local hmarine = NetProps.GetPropEntity(player, "m_hMarine");
-			if (hmarine != null)
-				marine = hmarine;
+			local hMarine = NetProps.GetPropEntity(player, "m_hMarine");
+			if (hMarine != null)
+				marine = hMarine;
 		}
 	}
 	
@@ -274,7 +275,8 @@ function Update()
 		}
 		if (secondaryUpdateRun)
 		{
-			ASB2SetUp();
+			HellionSetUp();
+			CarnageSetUp();
 			ReadPlayers();
 			ReadDataFile();
 			SetGifts();
@@ -531,7 +533,7 @@ function OnGameEvent_player_say(params)
 function TimerFunc()
 {
 	DoEntFire("!self", "Disable", "", 0, null, self);
-	DoEntFire("!self", "AddOutput", "speedscale 1.0", 0, null, h_victim);
+	DoEntFire("!self", "AddOutput", "speedscale 1.0", 0, null, hVictim);
 }
 
 function VictimDeathFunc()
@@ -692,7 +694,7 @@ function CheckDifficulty()
 	DoEntFire("!self", "Enable", "", 0, null, gs_timer);
 }
 
-function ASB2SetUp()
+function HellionSetUp()
 {
 	if (!bHellion)
 		return;
@@ -794,6 +796,35 @@ function ASB2SetUp()
 	}
 }
 
+function CarnageSetUp()
+{
+	if (!bCarnage)
+		return;
+	
+	local hMarine = null;
+	local MarineCounter = 0;
+	while ((hMarine = Entities.FindByClassname(hMarine, "asw_marine")) != null)
+		MarineCounter++;
+	switch (MarineCounter)
+	{
+		case 5:
+			Convars.SetValue("rd_carnage_scale", 1.75);
+			break;
+		case 6:
+			Convars.SetValue("rd_carnage_scale", 2.0);
+			break;
+		case 7:
+			Convars.SetValue("rd_carnage_scale", 2.0);
+			break;
+		case 8:
+			Convars.SetValue("rd_carnage_scale", 2.0);
+			break;
+		default:
+			Convars.SetValue("rd_carnage_scale", 1.5);
+			break;
+	}
+}
+
 function ReadPlayers()
 {
 	local player = null;
@@ -885,24 +916,24 @@ function ReloadPlayers()
 		strID = player.GetNetworkIDString();
 		foreach (index, val in PlayerManager)
 		{
-			if (strID == val.id)
-				bNewPlayer = false;
-			else
+			if (val.player == null)
 			{
 				PlayerManager.remove(index);
 				bNewPlayer = false;
 			}
-			if (bNewPlayer)
-				PushPlayerClass(player);
+			else if (strID == val.id)
+				bNewPlayer = false;
 		}
+		if (bNewPlayer)
+			PushPlayerClass(player);
 	}
 }
 
 function CheckPlayerIndex(player, index)
 {
-	local hmarine = NetProps.GetPropEntity(player, "m_hMarine");
-	if (PlayerManager[index].marine != hmarine)
-		PlayerManager[index].marine = hmarine;
+	local hMarine = NetProps.GetPropEntity(player, "m_hMarine");
+	if (PlayerManager[index].marine != hMarine)
+		PlayerManager[index].marine = hMarine;
 }
 
 function PushPlayerClass(player)
