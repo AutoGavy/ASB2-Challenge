@@ -5,15 +5,17 @@
 
 	"convars"
 	{
-		"asw_horde_override"						"1"
-		"asw_wanderer_override"					"1"
-		"rd_ready_mark_override"					"1"
-		"asw_sentry_friendly_fire_scale"			"1"
-		"asw_marine_ff_absorption"				"0"
-		"rd_biomass_ignite_from_flares"		"1"
+		"asw_horde_override"				"1"
+		"asw_wanderer_override"				"1"
+		"rd_ready_mark_override"			"1"
+		"asw_sentry_friendly_fire_scale"		"1"
+		"asw_marine_ff_absorption"			"0"
+		"rd_biomass_ignite_from_flares"			"1"
 		"rd_weapon_requirement_override"		"1"
 		"rd_override_allow_rotate_camera"		"1"
 		"rd_increase_difficulty_by_number_of_marines"	"0"
 		"rm_prespawn_num_biomass"			"0"
+		"rd_director_max_awake_aliens_for_horde" 	"45"
+		"rd_director_max_awake_aliens_for_wanderers" 	"45"
 	}
 }

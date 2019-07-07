@@ -78,6 +78,7 @@ class cPlayer
 	btail = true;
 	bammo = true;
 	bsurvived = true;
+	bspecing = false;
 	bflare = true;
 	bscale = true;
 	bHasSkin = 0;
@@ -460,15 +461,14 @@ function OnGameEvent_player_say(params)
 			DisplayMsg("&flare - Get a flare which can illuminate or burn biomass. 20000 shots required.\nPage 3/4     Type &help4 to see next page.");
 			return;
 		case "&help4":
-			DisplayMsg("&shrink / &enlarge - Scale your marine size. 20000 kills required.\n&status  -  Report current players' status.");
+			DisplayMsg("&shrink / &enlarge - Scale your marine size. 20000 kills required.\n&stats  -  Report current players' stats.");
 			DisplayMsg("~Have Fun!\nPage 4/4     Type &help3 to see previous page.");
 			return;
 		case "&map":
 			DisplayMsg("Current Map: " + GetMapName());
 			return;
-		case "&status":
-			ReloadPlayers();
-			ReportStatus();
+		case "&stats":
+			ReportStats();
 			return;
 		case "&cancel":
 			ReloadPlayers();
@@ -927,6 +927,8 @@ function ReloadPlayers()
 		if (bNewPlayer)
 			PushPlayerClass(player);
 	}
+	foreach (index, val in PlayerManager)
+		CheckPlayerIndex(val.player, index);
 }
 
 function CheckPlayerIndex(player, index)
@@ -1166,17 +1168,18 @@ function CheckMissionComplete()
 function MissonCompleteFunc()
 {
 	DisplayMsg("Mission Completed.", 0.06);
-	ReportStatus(1);
+	ReportStats(1);
 	foreach (index, val in PlayerManager)
 	{
-		if (val.marine != null && val.bsurvived)
+		if (val.marine != null && val.bsurvived && !bspecing)
 			SetPoints(index, 50, 1);
 	}
 	SaveData();
 }
 
-function ReportStatus(delay = 0.01)
+function ReportStats(delay = 0.01)
 {
+	CheckPlayerStatus();
 	local timer = Entities.CreateByClassname("logic_timer");
 	timer.__KeyValueFromFloat("RefireTime", delay);
 	DoEntFire("!self", "Disable", "", 0, null, timer);
@@ -1184,7 +1187,7 @@ function ReportStatus(delay = 0.01)
 	local timerScope = timer.GetScriptScope();
 	
 	timerScope.PlayerManager <- PlayerManager;
-	timerScope.ReportStatusHelper <- ReportStatusHelper;
+	timerScope.ReportStatsHelper <- ReportStatsHelper;
 	timerScope.TimerFunc <- function()
 	{
 		foreach (i, val in PlayerManager)
@@ -1192,19 +1195,16 @@ function ReportStatus(delay = 0.01)
 			local readMarker = 0;
 			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || _val.player == null)
+				if (y == i || val.player == null || _val.player == null)
 					continue;
 				
 				if (readMarker >= 4)
 				{
-					ReportStatusHelper(i, y);
+					ReportStatsHelper(i, y);
 					break;
 				}
-				if (val.player != null && _val.player != null)
-				{
-					ClientPrint(val.player, 3, _val.name + " got " + _val.kills + " kills, " + _val.shots + " shots. " + _val.status);
-					readMarker++;
-				}
+				ClientPrint(val.player, 3, _val.name + " got " + _val.kills + " kills, " + _val.shots + " shots. " + _val.status);
+				readMarker++;
 			}
 			if (val.player != null)
 				ClientPrint(val.player, 3, "You got: " + val.kills + " kills, " + val.shots + " shots. " + val.status);
@@ -1216,7 +1216,7 @@ function ReportStatus(delay = 0.01)
 	DoEntFire("!self", "Enable", "", 0, null, timer);
 }
 
-function ReportStatusHelper(i, y)
+function ReportStatsHelper(i, y)
 {
 	local timer = Entities.CreateByClassname("logic_timer");
 	timer.__KeyValueFromFloat("RefireTime", 2.5);
@@ -1231,16 +1231,28 @@ function ReportStatusHelper(i, y)
 	{
 		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || PlayerManager[y].player == null)
+			if (y == i || PlayerManager[i].player == null || PlayerManager[y].player == null)
 				continue;
-			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
-				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " got " + PlayerManager[y].kills + " kills, " + PlayerManager[y].shots + " shots.");
+			ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " got " + PlayerManager[y].kills + " kills, " + PlayerManager[y].shots + " shots." + val.status);
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
 	}
 	timer.ConnectOutput("OnTimer", "TimerFunc");
 	DoEntFire("!self", "Enable", "", 0, null, timer);
+}
+
+function CheckPlayerStatus()
+{
+	ReloadPlayers();
+	foreach (val in PlayerManager)
+	{
+		if (val.marine == null && !val.bsurvived)
+		{
+			val.status = "Spectating.";
+			val.bspecing = true;
+		}	
+	}
 }
 
 function GreetShowAllPoints()
@@ -1250,7 +1262,7 @@ function GreetShowAllPoints()
 		local readMarker = 0;
 		foreach (y, _val in PlayerManager)
 		{
-			if (y == i || _val.player == null)
+			if (y == i || val.player == null || _val.player == null)
 				continue;
 			
 			if (readMarker >= 3)
@@ -1258,11 +1270,8 @@ function GreetShowAllPoints()
 				ShowPointsHelper(i, y);
 				break;
 			}
-			if (val.player != null && _val.player != null)
-			{
-				ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
-				readMarker++;
-			}
+			ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
+			readMarker++;
 		}
 		if (val.player != null)
 			ClientPrint(val.player, 3, "You have: " + val.points + " pts.");
@@ -1276,7 +1285,7 @@ function ShowAllPoints()
 		local readMarker = 0;
 		foreach (y, _val in PlayerManager)
 		{
-			if (y == i || _val.player == null)
+			if (y == i || val.player == null || _val.player == null)
 				continue;
 			
 			if (readMarker >= 4)
@@ -1284,11 +1293,8 @@ function ShowAllPoints()
 				ShowPointsHelper(i, y);
 				break;
 			}
-			if (val.player != null && _val.player != null)
-			{
-				ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
-				readMarker++;
-			}
+			ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
+			readMarker++;
 		}
 		if (val.player != null)
 			ClientPrint(val.player, 3, "You have: " + val.points + " pts.");
@@ -1310,10 +1316,9 @@ function ShowPointsHelper(i, y)
 	{
 		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || PlayerManager[y].player == null)
+			if (y == i || PlayerManager[i].player == null || PlayerManager[y].player == null)
 				continue;
-			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
-				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].points + " pts.");
+			ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].points + " pts.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1339,7 +1344,7 @@ function ShowAllPointsLate()
 			local readMarker = 0;
 			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || _val.player == null)
+				if (y == i || val.player == null || _val.player == null)
 					continue;
 				
 				if (readMarker >= 4)
@@ -1347,11 +1352,8 @@ function ShowAllPointsLate()
 					ShowPointsHelper(i, y);
 					break;
 				}
-				if (val.player != null && _val.player != null)
-				{
-					ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
-					readMarker++;
-				}
+				ClientPrint(val.player, 3, _val.name + " has " + _val.points + " pts.");
+				readMarker++;
 			}
 			if (val.player != null)
 				ClientPrint(val.player, 3, "You have: " + val.points + " pts.");
@@ -1380,7 +1382,7 @@ function ShowKills()
 			local readMarker = 0;
 			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || _val.player == null)
+				if (y == i || val.player == null || _val.player == null)
 					continue;
 				
 				if (readMarker >= 4)
@@ -1388,11 +1390,8 @@ function ShowKills()
 					ShowKillsHelper(i, y);
 					break;
 				}
-				if (val.player != null && _val.player != null)
-				{
-					ClientPrint(val.player, 3, _val.name + " has " + _val.tkills + " kills.");
-					readMarker++;
-				}
+				ClientPrint(val.player, 3, _val.name + " has " + _val.tkills + " kills.");
+				readMarker++;
 			}
 			if (val.player != null)
 				ClientPrint(val.player, 3, "You have: " + val.tkills + " kills.");
@@ -1419,10 +1418,9 @@ function ShowKillsHelper(i, y)
 	{
 		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || PlayerManager[y].player == null)
+			if (y == i || PlayerManager[i].player == null || PlayerManager[y].player == null)
 				continue;
-			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
-				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].tkills + " kills.");
+			ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].tkills + " kills.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1448,7 +1446,7 @@ function ShowShots()
 			local readMarker = 0;
 			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || _val.player == null)
+				if (y == i || val.player == null || _val.player == null)
 					continue;
 				
 				if (readMarker >= 4)
@@ -1456,11 +1454,8 @@ function ShowShots()
 					ShowShotsHelper(i, y);
 					break;
 				}
-				if (val.player != null && _val.player != null)
-				{
-					ClientPrint(val.player, 3, _val.name + " has " + _val.tshots + " shots.");
-					readMarker++;
-				}
+				ClientPrint(val.player, 3, _val.name + " has " + _val.tshots + " shots.");
+				readMarker++;
 			}
 			if (val.player != null)
 				ClientPrint(val.player, 3, "You have: " + val.tshots + " shots.");
@@ -1487,10 +1482,9 @@ function ShowShotsHelper(i, y)
 	{
 		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || PlayerManager[y].player == null)
+			if (y == i || PlayerManager[i].player == null || PlayerManager[y].player == null)
 				continue;
-			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
-				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].tshots + " shots.");
+			ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].tshots + " shots.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1516,7 +1510,7 @@ function ShowDeaths()
 			local readMarker = 0;
 			foreach (y, _val in PlayerManager)
 			{
-				if (y == i || _val.player == null)
+				if (y == i || val.player == null || _val.player == null)
 					continue;
 				
 				if (readMarker >= 4)
@@ -1524,11 +1518,8 @@ function ShowDeaths()
 					ShowDeathsHelper(i, y);
 					break;
 				}
-				if (val.player != null && _val.player != null)
-				{
-					ClientPrint(val.player, 3, _val.name + " has " + _val.deaths + " deaths.");
-					readMarker++;
-				}
+				ClientPrint(val.player, 3, _val.name + " has " + _val.deaths + " deaths.");
+				readMarker++;
 			}
 			if (val.player != null)
 				ClientPrint(val.player, 3, "You have: " + val.deaths + " deaths.");
@@ -1555,10 +1546,9 @@ function ShowDeathsHelper(i, y)
 	{
 		for (; y < PlayerManager.len(); y++)
 		{
-			if (y == i || PlayerManager[y].player == null)
+			if (y == i || PlayerManager[i].player == null || PlayerManager[y].player == null)
 				continue;
-			if (PlayerManager[i].player != null || PlayerManager[y].player != null)
-				ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].deaths + " deaths.");
+			ClientPrint(PlayerManager[i].player, 3, PlayerManager[y].name + " has " + PlayerManager[y].deaths + " deaths.");
 		}
 		self.DisconnectOutput("OnTimer", "TimerFunc");
 		self.Destroy();
@@ -1700,6 +1690,7 @@ function SetMinePack(userid)
 		EntFireByHandle(cTarget.hmine, "DisableShadow", "", 0, cTarget.marine, cTarget.marine);
 		EntFireByHandle(cTarget.hmine, "SetParent", "!activator", 0, cTarget.marine, cTarget.marine);
 		EntFireByHandle(cTarget.hmine, "SetParentAttachment", "jump_jet_r", 0, null, cTarget.marine)
+		cTarget.hmine.SetOwner(cTarget.marine);
 		PropLocalRotate(cTarget.hmine);
 		
 		cTarget.points -= 100;
@@ -1747,6 +1738,7 @@ function SetAmmo(userid)
 		EntFireByHandle(cTarget.hammo, "DisableShadow", "", 0, cTarget.marine, cTarget.marine);
 		EntFireByHandle(cTarget.hammo, "SetParent", "!activator", 0, cTarget.marine, cTarget.marine);
 		EntFireByHandle(cTarget.hammo, "SetParentAttachment", "jump_jet_r", 0, null, cTarget.marine);
+		cTarget.hammo.SetOwner(cTarget.marine);
 		PropLocalRotate(cTarget.hammo);
 		
 		cTarget.points -= 100;
