@@ -15,7 +15,6 @@
 		"rd_override_allow_rotate_camera"		"1"
 		"rd_increase_difficulty_by_number_of_marines"	"0"
 		"rm_prespawn_num_biomass"			"0"
-		"rd_director_max_awake_aliens_for_horde" 	"45"
-		"rd_director_max_awake_aliens_for_wanderers" 	"45"
+		"rd_player_bots_allowed"			"0"
 	}
 }

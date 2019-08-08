@@ -18,6 +18,8 @@ Convars.SetValue("asw_marine_burn_time_easy", 60);
 Convars.SetValue("asw_marine_burn_time_normal", 60);
 Convars.SetValue("asw_marine_burn_time_hard", 60);
 Convars.SetValue("asw_marine_burn_time_insane", 60);
+Convars.SetValue("rd_bot_strong", 0);
+Convars.SetValue("rd_stuck_bot_teleport", 0);
 Convars.SetValue("rd_override_allow_rotate_camera", 1);
 Convars.SetValue("rd_increase_difficulty_by_number_of_marines", 0);
 
