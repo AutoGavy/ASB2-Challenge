@@ -15,6 +15,7 @@
 		"rd_override_allow_rotate_camera"		"1"
 		"rd_increase_difficulty_by_number_of_marines"	"0"
 		"rm_prespawn_num_biomass"			"0"
-		"rd_player_bots_allowed"			"0"
+		"rd_stuck_bot_teleport_to_marine"		"0"
+		"rd_stuck_bot_teleport"				"0"
 	}
 }
