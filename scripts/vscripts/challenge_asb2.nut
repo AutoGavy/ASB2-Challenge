@@ -163,7 +163,6 @@ if (Convars.GetFloat("asw_skill") == 1) //easy
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 0.3);
 }
 else if (Convars.GetFloat("asw_skill") == 2) //normal
 {
@@ -176,7 +175,6 @@ else if (Convars.GetFloat("asw_skill") == 2) //normal
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 0.3);
 }
 else if (Convars.GetFloat("asw_skill") == 3) //hard
 {
@@ -189,7 +187,6 @@ else if (Convars.GetFloat("asw_skill") == 3) //hard
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 0.2);
 }
 else if (Convars.GetFloat("asw_skill") == 4) //insane
 {
@@ -202,7 +199,6 @@ else if (Convars.GetFloat("asw_skill") == 4) //insane
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 15);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 0.2);
 }
 else if (Convars.GetFloat("asw_skill") == 5) //brutal
 {
@@ -215,18 +211,6 @@ else if (Convars.GetFloat("asw_skill") == 5) //brutal
 	Convars.SetValue("asw_director_peak_max_time", 4);
 	Convars.SetValue("asw_director_relaxed_min_time", 10);
 	Convars.SetValue("asw_director_relaxed_max_time", 30);
-	Convars.SetValue("asw_difficulty_alien_health_step", 0);
-	Convars.SetValue("asw_drone_health", 88);
-	Convars.SetValue("asw_ranger_health", 222);
-	Convars.SetValue("asw_drone_uber_health", 1300);
-	Convars.SetValue("asw_shaman_health", 129);
-	Convars.SetValue("rd_harvester_health", 440);
-	Convars.SetValue("rd_mortarbug_health", 770);
-	Convars.SetValue("rd_parasite_health", 55);
-	Convars.SetValue("rd_parasite_defanged_health", 22);
-	Convars.SetValue("rd_shieldbug_health", 2200);
-	Convars.SetValue("sk_asw_buzzer_health", 66);
-	Convars.SetValue("sk_antlionguard_health", 1000);
 }
 
 function OnMissionStart()
